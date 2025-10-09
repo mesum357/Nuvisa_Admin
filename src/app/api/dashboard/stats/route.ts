@@ -88,7 +88,7 @@ export async function GET() {
         ...app,
         totalAmount: Number(app.totalAmount),
         paidAmount: Number(app.paidAmount),
-      })),
+      })) as any,
     };
 
     return NextResponse.json({ success: true, data: stats });

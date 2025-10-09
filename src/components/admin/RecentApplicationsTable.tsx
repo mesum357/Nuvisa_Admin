@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
-import { Application } from '@/types';
+import { Application, PaginatedResponse } from '@/types';
 import { formatDate, getStatusColor } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -12,7 +12,7 @@ export default function RecentApplicationsTable() {
 
   const fetchApplications = useCallback(async () => {
     setLoading(true);
-    const response = await apiClient.get('/applications', {
+    const response = await apiClient.get<PaginatedResponse<Application>>('/applications', {
       page: '1',
       limit: '5',
       sortBy: 'submittedAt',

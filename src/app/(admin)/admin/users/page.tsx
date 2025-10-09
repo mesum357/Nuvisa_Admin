@@ -41,8 +41,8 @@ function UsersContent() {
       if (response.data.pagination) {
         setPagination((prev) => ({
           ...prev,
-          total: response.data.pagination.total || 0,
-          totalPages: response.data.pagination.totalPages || 0,
+          total: response.data?.pagination?.total || 0,
+          totalPages: response.data?.pagination?.totalPages || 0,
         }));
       }
     }
@@ -54,7 +54,7 @@ function UsersContent() {
   }, [fetchUsers]);
 
   const handleExport = useCallback(async () => {
-    const response = await apiClient.get('/export/users', {
+    const response = await apiClient.get<any[]>('/export/users', {
       status: filters.status,
       search: debouncedSearch,
     });

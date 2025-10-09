@@ -42,8 +42,8 @@ function ApplicationsContent() {
       if (response.data.pagination) {
         setPagination((prev) => ({
           ...prev,
-          total: response.data.pagination.total || 0,
-          totalPages: response.data.pagination.totalPages || 0,
+          total: response.data?.pagination?.total || 0,
+          totalPages: response.data?.pagination?.totalPages || 0,
         }));
       }
     }
@@ -55,7 +55,7 @@ function ApplicationsContent() {
   }, [fetchApplications]);
 
   const handleExport = useCallback(async () => {
-    const response = await apiClient.get('/export/applications', {
+    const response = await apiClient.get<any[]>('/export/applications', {
       status: filters.status,
       search: debouncedSearch,
     });

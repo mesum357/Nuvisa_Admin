@@ -6,7 +6,7 @@ import { sendEmail, getApplicationStatusEmailTemplate } from '@/lib/email';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,8 +15,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const application = await prisma.application.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: true,
         documents: true,
@@ -54,7 +55,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -63,11 +64,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const data = await request.json();
     const { status, sendNotification, ...updateData } = data;
 
     const currentApplication = await prisma.application.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { user: true },
     });
 
@@ -79,7 +81,7 @@ export async function PATCH(
     }
 
     const application = await prisma.application.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         user: true,
@@ -90,7 +92,7 @@ export async function PATCH(
     if (status && status !== currentApplication.status) {
       await prisma.applicationStatusHistory.create({
         data: {
-          applicationId: params.id,
+          applicationId: id,
           oldStatus: currentApplication.status,
           newStatus: status,
           changedBy: (session.user as any).id,
@@ -99,7 +101,7 @@ export async function PATCH(
       });
 
       await prisma.application.update({
-        where: { id: params.id },
+        where: { id },
         data: { status },
       });
 
@@ -137,7 +139,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -146,8 +148,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await prisma.application.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({
