@@ -1,0 +1,126 @@
+import { UserRole, UserStatus, ApplicationStatus } from '@prisma/client';
+
+export type { UserRole, UserStatus, ApplicationStatus };
+
+export interface Admin {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  phone?: string | null;
+  status: UserStatus;
+  isVerified: boolean;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Application {
+  id: string;
+  userId: string;
+  applicationNo: string;
+  status: ApplicationStatus;
+  totalAmount: number;
+  paidAmount: number;
+  appointmentDate?: Date | null;
+  appointmentSlot?: string | null;
+  submittedAt: Date;
+  updatedAt: Date;
+  user?: User;
+  documents?: Document[];
+  comments?: ApplicationComment[];
+}
+
+export interface Document {
+  id: string;
+  applicationId: string;
+  documentType: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  uploadedAt: Date;
+  isVerified: boolean;
+}
+
+export interface ApplicationComment {
+  id: string;
+  applicationId: string;
+  comment: string;
+  isInternal: boolean;
+  createdBy: string;
+  createdAt: Date;
+}
+
+export interface DashboardStats {
+  totalApplications: number;
+  totalUsers: number;
+  totalRevenue: number;
+  pendingApplications: number;
+  approvedApplications: number;
+  rejectedApplications: number;
+  newApplicationsToday: number;
+  newUsersToday: number;
+  revenueThisMonth: number;
+  applicationsByStatus: {
+    status: ApplicationStatus;
+    count: number;
+  }[];
+  recentApplications: Application[];
+}
+
+export interface SiteContent {
+  id: string;
+  key: string;
+  value: string;
+  type: string;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  metadata?: Record<string, any>;
+  createdAt: Date;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface FilterParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
