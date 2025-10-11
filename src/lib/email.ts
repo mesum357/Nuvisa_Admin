@@ -20,7 +20,7 @@ const transporter = nodemailer.createTransport({
 export async function sendEmail({ to, subject, html, text }: EmailOptions): Promise<boolean> {
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@nuvisa.com',
+      from: `Nuvisa Support <${process.env.EMAIL_FROM || 'support@nuvisa.co.uk'}>`,
       to,
       subject,
       html,
