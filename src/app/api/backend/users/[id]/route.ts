@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { BACKEND_CONFIG, getBackendUrl, getBackendHeaders } from '@/lib/config';
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,16 +14,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = await request.json();
 
     // Backend expects PATCH to /orders/users/:id; reuse backendGet with fetch for PATCH
-    const baseURL = process.env.BACKEND_API_URL || 'https://app.nuvisa.co.uk';
-    const adminOrigin = process.env.ADMIN_PUBLIC_URL || 'http://localhost:3001';
-    const tokenRes = await fetch(baseURL + '/auth/generate-token', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const tokenRes = await fetch(getBackendUrl(BACKEND_CONFIG.ENDPOINTS.AUTH.GENERATE_TOKEN), { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' } 
+    });
     const tokenData = await tokenRes.json().catch(() => ({} as any));
     const token = tokenData?.data?.token || tokenData?.token || tokenData?.data?.data?.token;
 
-    const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Admin-Origin': adminOrigin, 'X-Admin-Proxy': '1' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const headers = getBackendHeaders(token);
 
-    const res = await fetch(`${baseURL}/orders/users/${encodeURIComponent(id)}`, {
+    const res = await fetch(getBackendUrl(BACKEND_CONFIG.ENDPOINTS.ORDERS.USER_BY_ID(id)), {
       method: 'PATCH',
       headers,
       body: JSON.stringify(body),

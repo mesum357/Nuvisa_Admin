@@ -1,4 +1,7 @@
-const baseURL = process.env.BACKEND_API_URL || 'https://app.nuvisa.co.uk';
+import { BACKEND_CONFIG, getBackendUrl, getBackendHeaders } from './config';
+
+// STRICT STATIC CONFIGURATION - Always uses production backend
+const baseURL = BACKEND_CONFIG.BASE_URL;
 const staticToken = process.env.BACKEND_API_TOKEN; // optional service token
 
 let cachedToken: string | null = null;
@@ -12,9 +15,8 @@ async function ensureToken(requesterEmail?: string): Promise<string | undefined>
     return cachedTokenByEmail[requesterEmail].token;
   }
   if (cachedToken && now < cachedTokenExpiry) return cachedToken;
-  if (!baseURL) return undefined;
   try {
-    const res = await fetch(baseURL + '/auth/generate-token', {
+    const res = await fetch(getBackendUrl(BACKEND_CONFIG.ENDPOINTS.AUTH.GENERATE_TOKEN), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -31,7 +33,7 @@ async function ensureToken(requesterEmail?: string): Promise<string | undefined>
   // Fallback: try login with requesterEmail using sessionUser flow that returns token immediately
   try {
     if (requesterEmail) {
-      const res = await fetch(baseURL + '/auth/login', {
+      const res = await fetch(getBackendUrl(BACKEND_CONFIG.ENDPOINTS.AUTH.LOGIN), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: requesterEmail, sessionUser: true }),
@@ -49,16 +51,11 @@ async function ensureToken(requesterEmail?: string): Promise<string | undefined>
   return undefined;
 }
 
-if (!baseURL) {
-  // Throw at import time so it's obvious in dev
-  // but avoid crashing in prod build if env is injected later
-  if (process.env.NODE_ENV !== 'production') {
-    throw new Error('BACKEND_API_URL is not configured');
-  }
-}
+// STRICT STATIC CONFIGURATION - No environment variable checks needed
+// baseURL is always 'https://app.nuvisa.co.uk'
 
 export const backendGet = async (path: string, params?: Record<string, any>, requesterEmail?: string) => {
-  const url = new URL(baseURL + path);
+  const url = new URL(getBackendUrl(path));
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
@@ -66,12 +63,8 @@ export const backendGet = async (path: string, params?: Record<string, any>, req
       }
     });
   }
-  const headers: Record<string, string> = {};
-  const adminOrigin = process.env.ADMIN_PUBLIC_URL || 'http://localhost:3001';
-  headers['X-Admin-Origin'] = adminOrigin;
-  headers['X-Admin-Proxy'] = '1';
   const token = await ensureToken(requesterEmail);
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const headers = getBackendHeaders(token);
   const res = await fetch(url.toString(), { cache: 'no-store', headers });
   let data: any = null;
   try {
@@ -84,13 +77,9 @@ export const backendGet = async (path: string, params?: Record<string, any>, req
 };
 
 export const backendPatch = async (path: string, body?: any, requesterEmail?: string) => {
-  const url = baseURL + path;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const adminOrigin = process.env.ADMIN_PUBLIC_URL || 'http://localhost:3001';
-  headers['X-Admin-Origin'] = adminOrigin;
-  headers['X-Admin-Proxy'] = '1';
+  const url = getBackendUrl(path);
   const token = await ensureToken(requesterEmail);
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const headers = getBackendHeaders(token);
   const res = await fetch(url, { method: 'PATCH', headers, cache: 'no-store', body: body ? JSON.stringify(body) : undefined });
   let data: any = null;
   try {
