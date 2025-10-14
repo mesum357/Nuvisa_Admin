@@ -1,4 +1,4 @@
-const baseURL = process.env.BACKEND_API_URL;
+const baseURL = process.env.BACKEND_API_URL || 'https://app.nuvisa.co.uk';
 const staticToken = process.env.BACKEND_API_TOKEN; // optional service token
 
 let cachedToken: string | null = null;
@@ -58,7 +58,7 @@ if (!baseURL) {
 }
 
 export const backendGet = async (path: string, params?: Record<string, any>, requesterEmail?: string) => {
-  const url = new URL((baseURL || '') + path);
+  const url = new URL(baseURL + path);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
@@ -84,7 +84,7 @@ export const backendGet = async (path: string, params?: Record<string, any>, req
 };
 
 export const backendPatch = async (path: string, body?: any, requesterEmail?: string) => {
-  const url = (baseURL || '') + path;
+  const url = baseURL + path;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const adminOrigin = process.env.ADMIN_PUBLIC_URL || 'http://localhost:3001';
   headers['X-Admin-Origin'] = adminOrigin;

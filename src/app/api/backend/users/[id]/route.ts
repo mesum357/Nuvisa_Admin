@@ -13,7 +13,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = await request.json();
 
     // Backend expects PATCH to /orders/users/:id; reuse backendGet with fetch for PATCH
-    const baseURL = process.env.BACKEND_API_URL || '';
+    const baseURL = process.env.BACKEND_API_URL || 'https://app.nuvisa.co.uk';
     const adminOrigin = process.env.ADMIN_PUBLIC_URL || 'http://localhost:3001';
     const tokenRes = await fetch(baseURL + '/auth/generate-token', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
     const tokenData = await tokenRes.json().catch(() => ({} as any));
