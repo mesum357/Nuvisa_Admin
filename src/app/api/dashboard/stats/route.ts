@@ -92,7 +92,7 @@ export async function GET() {
     };
 
     return NextResponse.json({ success: true, data: stats });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to fetch dashboard stats' },
       { status: 500 }

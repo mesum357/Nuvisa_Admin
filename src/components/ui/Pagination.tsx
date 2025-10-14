@@ -27,7 +27,7 @@ export default function Pagination({
     const arr: number[] = [];
     const maxShown = 5;
     let start = Math.max(1, page - Math.floor(maxShown / 2));
-    let end = Math.min(totalPages, start + maxShown - 1);
+    const end = Math.min(totalPages, start + maxShown - 1);
     start = Math.max(1, Math.min(start, end - maxShown + 1));
     for (let i = start; i <= end; i++) arr.push(i);
     return arr;

@@ -32,7 +32,7 @@ export async function GET(
       success: true,
       data: user,
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to fetch user' },
       { status: 500 }
@@ -63,7 +63,7 @@ export async function PATCH(
       success: true,
       data: user,
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to update user' },
       { status: 500 }
@@ -91,7 +91,7 @@ export async function DELETE(
       success: true,
       message: 'User deleted successfully',
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to delete user' },
       { status: 500 }

@@ -30,7 +30,7 @@ export async function POST(
       success: true,
       data: comment,
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to add comment' },
       { status: 500 }

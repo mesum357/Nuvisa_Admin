@@ -17,7 +17,7 @@ export interface AdminRole {
   id: string;
   name: string;
   description?: string | null;
-  permissions: Record<string, any>;
+  permissions: Record<string, boolean>;
   isSystem: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -103,11 +103,11 @@ export interface Notification {
   title: string;
   message: string;
   isRead: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;

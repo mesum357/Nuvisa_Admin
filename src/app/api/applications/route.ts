@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         },
       },
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to fetch applications' },
       { status: 500 }
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         paidAmount: Number(application.paidAmount),
       },
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to create application' },
       { status: 500 }

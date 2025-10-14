@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         pagination,
       },
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: 'Failed to fetch applicants' }, { status: 500 });
   }
 }

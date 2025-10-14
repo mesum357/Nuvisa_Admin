@@ -25,7 +25,7 @@ export async function GET() {
       success: true,
       data: notifications,
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to fetch notifications' },
       { status: 500 }
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: notification,
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to create notification' },
       { status: 500 }

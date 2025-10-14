@@ -17,7 +17,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    let application = await prisma.application.findUnique({
+    const application = await prisma.application.findUnique({
       where: { id },
       include: {
         user: true,
@@ -36,7 +36,7 @@ export async function GET(
       try {
         const be = await backendGet(`/orders/application/${id}`);
         if (be.ok) {
-          const payload: any = be.data?.data || be.data || {};
+          const payload: unknown = be.data?.data || be.data || {};
           // Return backend payload as-is so the client gets the exact data for the id
           return NextResponse.json({ success: true, data: payload });
         }
@@ -56,7 +56,7 @@ export async function GET(
         paidAmount: Number(application.paidAmount),
       },
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to fetch application' },
       { status: 500 }
@@ -79,16 +79,16 @@ export async function PATCH(
     const data = await request.json();
     const { status, sendNotification, ...updateData } = data;
 
-    let currentApplication = await prisma.application.findUnique({
+    const currentApplication = await prisma.application.findUnique({
       where: { id },
       include: { user: true },
     });
 
     if (!currentApplication) {
       // Fallback to backend update when not found in local Prisma DB
-      const be = await backendPatch(`/orders/application/${id}/status`, { status }, (session.user as any)?.email);
+      const be = await backendPatch(`/orders/application/${id}/status`, { status }, (session.user as { email?: string })?.email);
       if (be.ok) {
-        const app: any = be.data?.data || be.data || {};
+        const app: unknown = be.data?.data || be.data || {};
         // Return backend payload directly so details reflect exact record
         return NextResponse.json({ success: true, data: app });
       }
@@ -113,7 +113,7 @@ export async function PATCH(
           applicationId: id,
           oldStatus: currentApplication.status,
           newStatus: status,
-          changedBy: (session.user as any).id,
+          changedBy: (session.user as { id: string }).id,
           note: updateData.note || null,
         },
       });
@@ -147,7 +147,7 @@ export async function PATCH(
         paidAmount: Number(application.paidAmount),
       },
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to update application' },
       { status: 500 }
@@ -175,7 +175,7 @@ export async function DELETE(
       success: true,
       message: 'Application deleted successfully',
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to delete application' },
       { status: 500 }

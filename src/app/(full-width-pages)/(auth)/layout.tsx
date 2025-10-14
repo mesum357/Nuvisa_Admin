@@ -1,5 +1,4 @@
 import GridShape from "@/components/common/GridShape";
-import ThemeTogglerTwo from "@/components/common/ThemeTogglerTwo";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";

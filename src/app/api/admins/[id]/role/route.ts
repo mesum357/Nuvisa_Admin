@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -13,8 +13,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: 'Invalid roleId' }, { status: 400 });
   }
 
+  const { id } = await params;
+
   // Prevent changing role for SUPER_ADMIN admins
-  const targetAdmin = await prisma.admin.findUnique({ where: { id: params.id } });
+  const targetAdmin = await prisma.admin.findUnique({ where: { id } });
   if (!targetAdmin) return NextResponse.json({ error: 'Admin not found' }, { status: 404 });
   if (targetAdmin.role === 'SUPER_ADMIN') {
     return NextResponse.json({ error: 'Cannot modify SUPER_ADMIN role' }, { status: 400 });
@@ -26,7 +28,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 
   const updated = await prisma.admin.update({
-    where: { id: params.id },
+    where: { id },
     data: { roleId: roleId ?? null },
   });
 

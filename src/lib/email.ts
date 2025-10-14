@@ -27,7 +27,7 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions): Prom
       text: text || '',
     });
     return true;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }

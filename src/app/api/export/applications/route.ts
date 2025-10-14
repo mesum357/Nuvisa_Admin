@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: csvData,
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to export applications' },
       { status: 500 }

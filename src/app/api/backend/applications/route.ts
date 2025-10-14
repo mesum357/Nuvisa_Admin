@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
         },
       },
     });
-  } catch (error: any) {
+  } catch (_error: any) {
     return NextResponse.json({ error: 'Failed to fetch from backend' }, { status: 500 });
   }
 }

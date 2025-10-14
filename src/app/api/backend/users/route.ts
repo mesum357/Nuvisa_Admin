@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     // count support
     const count = inner?.count ?? envelope?.data?.count ?? envelope?.count;
     if (!pagination && typeof count === 'number') {
-      const total = Number(payload.count) || 0;
+      const total = Number(count) || 0;
       pagination = { page: Number(page), limit: Number(limit), total, totalPages: Math.ceil(total / Number(limit || 1)) };
     }
     if (!pagination) {
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         pagination,
       },
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
 }

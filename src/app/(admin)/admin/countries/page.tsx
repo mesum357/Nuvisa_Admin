@@ -194,7 +194,7 @@ export default function CountriesPage() {
           <div className="flex gap-2">
             <Button type="submit" disabled={saving}>{editingId ? "Update" : "Create"}</Button>
             {editingId && (
-              <Button type="button" variant="secondary" onClick={resetForm} disabled={saving}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={resetForm} disabled={saving}>Cancel</Button>
             )}
           </div>
         </form>
@@ -223,7 +223,7 @@ export default function CountriesPage() {
                   </div>
                   <div className="p-3 flex gap-2">
                     <Button size="sm" onClick={() => handleEdit(c)} disabled={saving}>Edit</Button>
-                    <Button size="sm" variant="danger" onClick={() => handleDelete(c.id)} disabled={saving}>Delete</Button>
+                    <Button size="sm" variant="outline" onClick={() => handleDelete(c.id)} disabled={saving}>Delete</Button>
                   </div>
                 </div>
               ))}

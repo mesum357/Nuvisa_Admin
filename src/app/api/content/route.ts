@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: contents,
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to fetch content' },
       { status: 500 }
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: content,
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to create content' },
       { status: 500 }
@@ -99,7 +99,7 @@ export async function PATCH(request: NextRequest) {
       success: true,
       data: content,
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: 'Failed to update content' },
       { status: 500 }
