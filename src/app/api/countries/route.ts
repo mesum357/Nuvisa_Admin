@@ -3,19 +3,30 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-// Simple CORS helper
+// CORS helper for production
 function getCorsHeaders(request: NextRequest) {
   const origin = request.headers.get('origin') || '';
-  const allowed = (process.env.ADMIN_CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001')
-    .split(',')
-    .map((o) => o.trim());
-
-  const allowOrigin = allowed.includes(origin) ? origin : allowed[0] || '*';
+  
+  // Define allowed origins for production
+  const allowedOrigins = [
+    'https://www.nuvisa.co.uk',
+    'https://nuvisa.co.uk',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ];
+  
+  // Add any additional origins from environment variable
+  const envOrigins = process.env.ADMIN_CORS_ORIGINS?.split(',').map(o => o.trim()) || [];
+  const allAllowedOrigins = [...allowedOrigins, ...envOrigins];
+  
+  // Check if origin is allowed
+  const allowOrigin = allAllowedOrigins.includes(origin) ? origin : 
+    (origin && origin.startsWith('https://') ? origin : 'https://www.nuvisa.co.uk');
 
   return new Headers({
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
     'Access-Control-Allow-Credentials': 'true',
     'Vary': 'Origin',
   });
