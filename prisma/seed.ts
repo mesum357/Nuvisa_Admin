@@ -6,6 +6,24 @@ const prisma = new PrismaClient();
 async function main() {
   const hashedPassword = await bcrypt.hash('Admin@123', 12);
 
+  // Ensure a default Manager role with conservative permissions exists
+  const managerRole = await prisma.adminRole.upsert({
+    where: { name: 'Manager' },
+    update: {},
+    create: {
+      name: 'Manager',
+      description: 'Can view applications and users; limited write access',
+      isSystem: true,
+      permissions: {
+        applications: { read: true, write: true, export: true },
+        users: { read: true, write: false },
+        notifications: { read: true, write: true },
+        siteContent: { read: true, write: false },
+        roles: { read: true, write: false },
+      },
+    },
+  });
+
   const admin = await prisma.admin.upsert({
     where: { email: 'admin@nuvisa.com' },
     update: {},
@@ -14,6 +32,7 @@ async function main() {
       password: hashedPassword,
       name: 'Super Admin',
       role: 'SUPER_ADMIN',
+      roleId: managerRole.id,
       isActive: true,
     },
   });

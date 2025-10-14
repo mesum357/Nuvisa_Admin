@@ -17,24 +17,16 @@ function UsersContent() {
     total: 0,
     totalPages: 0,
   });
-  const [filters, setFilters] = useState({
-    search: '',
-    status: '',
-    sortBy: 'createdAt',
-    sortOrder: 'desc' as 'asc' | 'desc',
-  });
-
-  const debouncedSearch = useDebounce(filters.search, 500);
+  // Keep only search filter as requested
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 500);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    const response = await apiClient.get<PaginatedResponse<User>>('/users', {
+    const response = await apiClient.get<PaginatedResponse<User>>('/backend/users', {
       page: pagination.page.toString(),
       limit: pagination.limit.toString(),
       search: debouncedSearch,
-      status: filters.status,
-      sortBy: filters.sortBy,
-      sortOrder: filters.sortOrder,
     });
     if (response.success && response.data) {
       setUsers(response.data.data || []);
@@ -47,34 +39,27 @@ function UsersContent() {
       }
     }
     setLoading(false);
-  }, [pagination.page, pagination.limit, debouncedSearch, filters.status, filters.sortBy, filters.sortOrder]);
+  }, [pagination.page, pagination.limit, debouncedSearch]);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
+
   const handleExport = useCallback(async () => {
-    const response = await apiClient.get<any[]>('/export/users', {
-      status: filters.status,
-      search: debouncedSearch,
-    });
+    const response = await apiClient.get<any[]>('/export/users', { search: debouncedSearch });
     if (response.success && response.data) {
       downloadCSV(response.data, `users-${Date.now()}`);
     }
-  }, [filters.status, debouncedSearch]);
+  }, [debouncedSearch]);
 
   const handleSearch = useCallback((value: string) => {
-    setFilters((prev) => ({ ...prev, search: value }));
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
-
-  const handleStatusFilter = useCallback((status: string) => {
-    setFilters((prev) => ({ ...prev, status }));
+    setSearch(value);
     setPagination((prev) => ({ ...prev, page: 1 }));
   }, []);
 
   const handleUpdateUserStatus = useCallback(async (userId: string, newStatus: UserStatus) => {
-    const response = await apiClient.patch(`/users/${userId}`, {
+    const response = await apiClient.patch(`/backend/users/${userId}`, {
       status: newStatus,
     });
 
@@ -84,7 +69,7 @@ function UsersContent() {
   }, [fetchUsers]);
 
   const handleVerifyUser = useCallback(async (userId: string) => {
-    const response = await apiClient.patch(`/users/${userId}`, {
+    const response = await apiClient.patch(`/backend/users/${userId}`, {
       isVerified: true,
       status: 'ACTIVE',
     });
@@ -112,24 +97,14 @@ function UsersContent() {
 
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex gap-4">
             <input
               type="text"
               placeholder="Search users..."
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-              value={filters.search}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              value={search}
               onChange={(e) => handleSearch(e.target.value)}
             />
-            <select
-              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-              value={filters.status}
-              onChange={(e) => handleStatusFilter(e.target.value)}
-            >
-              <option value="">All Status</option>
-              <option value="ACTIVE">Active</option>
-              <option value="BLOCKED">Blocked</option>
-              <option value="PENDING_VERIFICATION">Pending Verification</option>
-            </select>
           </div>
         </div>
 
@@ -228,6 +203,7 @@ function UsersContent() {
                           Activate
                         </button>
                       )}
+                      {/* Assign role UI removed as per request */}
                     </td>
                   </tr>
                 ))

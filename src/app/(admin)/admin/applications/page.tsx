@@ -8,6 +8,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import Link from 'next/link';
 import Button from '@/components/ui/button/Button';
 import { Suspense } from 'react';
+import Pagination from '@/components/ui/Pagination';
 
 function ApplicationsContent() {
   const [applications, setApplications] = useState<Application[]>([]);
@@ -20,7 +21,6 @@ function ApplicationsContent() {
   });
   const [filters, setFilters] = useState({
     search: '',
-    status: '',
     sortBy: 'submittedAt',
     sortOrder: 'desc' as 'asc' | 'desc',
   });
@@ -29,26 +29,26 @@ function ApplicationsContent() {
 
   const fetchApplications = useCallback(async () => {
     setLoading(true);
-    const response = await apiClient.get<PaginatedResponse<Application>>('/applications', {
+    const response = await apiClient.get<PaginatedResponse<Application>>('/backend/applications', {
       page: pagination.page.toString(),
       limit: pagination.limit.toString(),
       search: debouncedSearch,
-      status: filters.status,
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder,
     });
     if (response.success && response.data) {
-      setApplications(response.data.data || []);
+      const list = Array.isArray(response.data.data) ? response.data.data : [];
+      setApplications(list);
       if (response.data.pagination) {
         setPagination((prev) => ({
           ...prev,
-          total: response.data?.pagination?.total || 0,
-          totalPages: response.data?.pagination?.totalPages || 0,
+          total: Number(response.data?.pagination?.total || 0),
+          totalPages: Number(response.data?.pagination?.totalPages || 0),
         }));
       }
     }
     setLoading(false);
-  }, [pagination.page, pagination.limit, debouncedSearch, filters.status, filters.sortBy, filters.sortOrder]);
+  }, [pagination.page, pagination.limit, debouncedSearch, filters.sortBy, filters.sortOrder]);
 
   useEffect(() => {
     fetchApplications();
@@ -56,23 +56,19 @@ function ApplicationsContent() {
 
   const handleExport = useCallback(async () => {
     const response = await apiClient.get<any[]>('/export/applications', {
-      status: filters.status,
       search: debouncedSearch,
     });
     if (response.success && response.data) {
       downloadCSV(response.data, `applications-${Date.now()}`);
     }
-  }, [filters.status, debouncedSearch]);
+  }, [debouncedSearch]);
 
   const handleSearch = useCallback((value: string) => {
     setFilters((prev) => ({ ...prev, search: value }));
     setPagination((prev) => ({ ...prev, page: 1 }));
   }, []);
 
-  const handleStatusFilter = useCallback((status: string) => {
-    setFilters((prev) => ({ ...prev, status }));
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
+  // Status filter removed
 
   return (
     <div className="space-y-6">
@@ -100,18 +96,6 @@ function ApplicationsContent() {
               value={filters.search}
               onChange={(e) => handleSearch(e.target.value)}
             />
-            <select
-              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-              value={filters.status}
-              onChange={(e) => handleStatusFilter(e.target.value)}
-            >
-              <option value="">All Status</option>
-              <option value="PENDING">Pending</option>
-              <option value="UNDER_REVIEW">Under Review</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="COMPLETED">Completed</option>
-            </select>
           </div>
         </div>
 
@@ -196,31 +180,18 @@ function ApplicationsContent() {
           </table>
         </div>
 
-        {pagination.totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Showing {applications.length} of {pagination.total} applications
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
-                disabled={pagination.page === 1}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
-                disabled={pagination.page === pagination.totalPages}
-              >
-                Next
-              </Button>
-            </div>
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800">
+          <div className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+            Showing {applications.length} of {pagination.total} applications
           </div>
-        )}
+          <Pagination
+            page={pagination.page}
+            totalPages={Math.max(pagination.totalPages, 1)}
+            pageSize={pagination.limit}
+            onPageChange={(p) => setPagination((prev) => ({ ...prev, page: p }))}
+            onPageSizeChange={(size) => setPagination((prev) => ({ ...prev, limit: size, page: 1 }))}
+          />
+        </div>
       </div>
     </div>
   );

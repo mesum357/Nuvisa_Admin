@@ -18,7 +18,11 @@ export default function UserDropdown() {
   }
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/signin' });
+    await signOut();
+    // Force redirect to current domain's signin page
+    if (typeof window !== 'undefined') {
+      window.location.href = '/signin';
+    }
   };
 
   const userName = session?.user?.name || "Admin";

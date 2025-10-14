@@ -9,6 +9,7 @@ export function useAuth() {
     isLoading: status === 'loading',
     isAuthenticated: !!session,
     role: (session?.user as any)?.role as UserRole | undefined,
+    permissions: (session?.user as any)?.permissions as Record<string, any> | undefined,
   };
 }
 
@@ -23,6 +24,16 @@ export function useRequireAuth(requiredRole?: UserRole) {
     isAuthenticated,
     hasAccess,
     role,
+  };
+}
+
+export function useCan() {
+  const { role, permissions } = useAuth();
+  return (moduleKey: string, action: string = 'read'): boolean => {
+    if (role === 'SUPER_ADMIN') return true;
+    const modulePerm = (permissions as any)?.[moduleKey];
+    if (!modulePerm) return false;
+    return modulePerm[action] === true;
   };
 }
 

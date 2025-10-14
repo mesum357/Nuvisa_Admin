@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
+import { useCan } from "../hooks/useAuth";
 import {
   ChevronDownIcon,
   GridIcon,
@@ -20,7 +21,7 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   {
     icon: <GridIcon />,
     name: "Dashboard",
@@ -29,11 +30,7 @@ const navItems: NavItem[] = [
   {
     icon: <ListIcon />,
     name: "Applications",
-    subItems: [
-      { name: "All Applications", path: "/admin/applications", pro: false },
-      { name: "Pending", path: "/admin/applications?status=PENDING", pro: false },
-      { name: "Approved", path: "/admin/applications?status=APPROVED", pro: false },
-    ],
+    path: "/admin/applications",
   },
   {
     icon: <UserCircleIcon />,
@@ -41,9 +38,19 @@ const navItems: NavItem[] = [
     path: "/admin/users",
   },
   {
+    icon: <UserCircleIcon />,
+    name: "Admins",
+    path: "/admin/admins",
+  },
+  {
+    icon: <UserCircleIcon />,
+    name: "Roles",
+    path: "/admin/roles",
+  },
+  {
     icon: <PageIcon />,
-    name: "Content",
-    path: "/admin/content",
+    name: "Countries",
+    path: "/admin/countries",
   }
 ];
 
@@ -52,6 +59,20 @@ const othersItems: NavItem[] = [];
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const can = useCan();
+
+  const navItems = React.useMemo(() => {
+    // Filter by permissions where applicable
+    return baseNavItems.filter((item) => {
+      if (!item.path) return true;
+      if (item.path.startsWith('/admin/applications')) return can('applications', 'read');
+      if (item.path.startsWith('/admin/users')) return can('users', 'read');
+      if (item.path.startsWith('/admin/admins')) return can('users', 'read');
+      if (item.path.startsWith('/admin/countries')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/roles')) return can('roles', 'read');
+      return true;
+    });
+  }, [can]);
 
   const renderMenuItems = (
     navItems: NavItem[],

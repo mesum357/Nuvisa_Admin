@@ -34,6 +34,8 @@ model Admin {
   password  String
   name      String
   role      UserRole @default(ADMIN)
+  roleId    String?
+  customRole AdminRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -44,6 +46,23 @@ model Admin {
   @@index([email])
   @@index([isActive])
   @@map("admins")
+}
+
+/// Represents a custom admin role containing per-module permissions.
+model AdminRole {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  // JSON object mapping module identifiers to permission objects, e.g.
+  // { "applications": { "read": true, "write": false }, "users": { ... } }
+  permissions Json
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  admins      Admin[]
+
+  @@map("admin_roles")
 }
 
 model User {
@@ -202,5 +221,25 @@ model SystemStats {
   rejectedApps      Int      @default(0)
 
   @@map("system_stats")
+}
+
+model Country {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  slug           String   @unique
+  image          String   @db.Text
+  landmark       String
+  visaFee        Decimal  @default(159) @db.Decimal(10, 2)
+  insuranceFee   Decimal  @default(400) @db.Decimal(10, 2)
+  appointmentText String  @default("Appointment in 10 days or less")
+  isActive       Boolean  @default(true)
+  displayOrder   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  updatedBy      String?
+
+  @@index([isActive])
+  @@index([displayOrder])
+  @@map("countries")
 }
 

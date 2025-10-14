@@ -18,6 +18,7 @@ export const authOptions: NextAuthOptions = {
 
         const admin = await prisma.admin.findUnique({
           where: { email: credentials.email },
+          include: { customRole: true },
         });
 
         if (!admin || !admin.isActive) {
@@ -38,6 +39,8 @@ export const authOptions: NextAuthOptions = {
           email: admin.email,
           name: admin.name,
           role: admin.role,
+          roleId: admin.roleId,
+          permissions: (admin as any).customRole?.permissions || null,
         };
       },
     }),
@@ -47,19 +50,37 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+        (token as any).roleId = (user as any).roleId ?? null;
+        (token as any).permissions = (user as any).permissions ?? null;
+        return token;
       }
+      // Refresh permissions on subsequent requests so role assignment applies after reload
+      try {
+        const id = (token as any).id as string | undefined;
+        if (id) {
+          const admin = await prisma.admin.findUnique({ where: { id }, include: { customRole: true } });
+          if (admin) {
+            token.role = admin.role;
+            (token as any).roleId = admin.roleId ?? null;
+            (token as any).permissions = (admin as any).customRole?.permissions ?? null;
+          }
+        }
+      } catch {}
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
+        (session.user as any).roleId = (token as any).roleId ?? null;
+        (session.user as any).permissions = (token as any).permissions ?? null;
       }
       return session;
     },
   },
   pages: {
     signIn: '/signin',
+    signOut: '/signin',
   },
   session: {
     strategy: 'jwt',

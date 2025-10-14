@@ -2,7 +2,6 @@ import { Outfit } from 'next/font/google';
 import './globals.css';
 
 import { SidebarProvider } from '@/context/SidebarContext';
-import { ThemeProvider } from '@/context/ThemeContext';
 import SessionProvider from '@/providers/SessionProvider';
 
 const outfit = Outfit({
@@ -16,11 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.className} dark:bg-gray-900`}>
+      <body className={`${outfit.className}`}>
         <SessionProvider>
-          <ThemeProvider>
-            <SidebarProvider>{children}</SidebarProvider>
-          </ThemeProvider>
+          <SidebarProvider>{children}</SidebarProvider>
         </SessionProvider>
       </body>
     </html>

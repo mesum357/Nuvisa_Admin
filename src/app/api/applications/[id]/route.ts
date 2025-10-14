@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { backendGet, backendPatch } from '@/lib/backend-client';
 import { sendEmail, getApplicationStatusEmailTemplate } from '@/lib/email';
 
 export async function GET(
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    const application = await prisma.application.findUnique({
+    let application = await prisma.application.findUnique({
       where: { id },
       include: {
         user: true,
@@ -30,7 +31,17 @@ export async function GET(
       },
     });
 
+    // Fallback to backend if not in Prisma DB
     if (!application) {
+      try {
+        const be = await backendGet(`/orders/application/${id}`);
+        if (be.ok) {
+          const payload: any = be.data?.data || be.data || {};
+          // Return backend payload as-is so the client gets the exact data for the id
+          return NextResponse.json({ success: true, data: payload });
+        }
+      } catch {}
+
       return NextResponse.json(
         { error: 'Application not found' },
         { status: 404 }
@@ -68,12 +79,19 @@ export async function PATCH(
     const data = await request.json();
     const { status, sendNotification, ...updateData } = data;
 
-    const currentApplication = await prisma.application.findUnique({
+    let currentApplication = await prisma.application.findUnique({
       where: { id },
       include: { user: true },
     });
 
     if (!currentApplication) {
+      // Fallback to backend update when not found in local Prisma DB
+      const be = await backendPatch(`/orders/application/${id}/status`, { status }, (session.user as any)?.email);
+      if (be.ok) {
+        const app: any = be.data?.data || be.data || {};
+        // Return backend payload directly so details reflect exact record
+        return NextResponse.json({ success: true, data: app });
+      }
       return NextResponse.json(
         { error: 'Application not found' },
         { status: 404 }

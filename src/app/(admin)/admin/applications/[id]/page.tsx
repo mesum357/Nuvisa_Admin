@@ -23,8 +23,40 @@ export default function ApplicationDetailsPage() {
     setLoading(true);
     const response = await apiClient.get<Application>(`/applications/${params.id}`);
     if (response.success && response.data) {
-      setApplication(response.data);
-      setNewStatus(response.data.status);
+      const envelope: any = response.data as any;
+      const d: any = envelope?.results ?? envelope; // unwrap backend { data: { results } } shape
+
+      const mapBackendStatus = (s?: string): ApplicationStatus => {
+        const v = (s || '').toLowerCase();
+        if (v === 'new' || v === 'draft') return 'PENDING' as ApplicationStatus;
+        if (v === 'submitted' || v === 'under_review' || v === 'processing') return 'UNDER_REVIEW' as ApplicationStatus;
+        if (v === 'approved') return 'APPROVED' as ApplicationStatus;
+        if (v === 'completed') return 'COMPLETED' as ApplicationStatus;
+        if (v === 'rejected' || v === 'cancelled') return 'REJECTED' as ApplicationStatus;
+        return (v as ApplicationStatus) || ('PENDING' as ApplicationStatus);
+      };
+      // Normalize if backend payload is returned directly
+      const normalized: Application = {
+        id: d.id || d.applicationId || String(params.id),
+        applicationNo: d.applicationNo || d.code || d.orderId || d.id,
+        status: mapBackendStatus(d.status || d.applicationStatus),
+        totalAmount: Number(d.totalAmount ?? d.amountPaid ?? d.amountPaidTotal ?? 0),
+        paidAmount: Number(d.paidAmount ?? d.amountPaid ?? d.amountPaidTotal ?? 0),
+        submittedAt: d.submittedAt || d.createdAt || d.paymentDate || new Date().toISOString(),
+        user: d.user || { id: d.email, name: d.email, email: d.email },
+      } as any;
+      // Attach additional backend fields for UI display
+      (normalized as any).country = d.country;
+      (normalized as any).travelStartDate = d.travelStartDate;
+      (normalized as any).travelEndDate = d.travelEndDate;
+      (normalized as any).paymentStatus = d.paymentStatus;
+      (normalized as any).paymentMethod = d.paymentMethod;
+      (normalized as any).visaTypeId = d.visaTypeId || d.selectedVisaType;
+      (normalized as any).numberOfTravellers = d.numberOfTravellers;
+      (normalized as any).insuranceDetails = d.insuranceDetails;
+      (normalized as any).travelersData = d.travelersData;
+      setApplication(normalized as any);
+      setNewStatus(normalized.status);
     }
     setLoading(false);
   }, [params.id]);
@@ -113,7 +145,7 @@ export default function ApplicationDetailsPage() {
                     application.status
                   )}`}
                 >
-                  {application.status.replace('_', ' ')}
+                  {(application.status || '').replace('_', ' ')}
                 </span>
               </div>
               <div>

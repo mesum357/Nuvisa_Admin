@@ -7,7 +7,18 @@ export interface Admin {
   email: string;
   name: string;
   role: UserRole;
+  roleId?: string | null;
   isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AdminRole {
+  id: string;
+  name: string;
+  description?: string | null;
+  permissions: Record<string, any>;
+  isSystem: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -122,5 +133,21 @@ export interface FilterParams {
   endDate?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+}
+
+export interface Country {
+  id: string;
+  name: string;
+  slug: string;
+  image: string;
+  landmark: string;
+  visaFee: number;
+  insuranceFee: number;
+  appointmentText: string;
+  isActive: boolean;
+  displayOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
 }
 
