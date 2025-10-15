@@ -15,14 +15,20 @@ export default function ApplicationStatusChart() {
     fetchStats();
   }, []);
 
-  const fetchStats = async () => {
-    setLoading(true);
+  const fetchStats = async (showLoading: boolean = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     const response = await apiClient.get<DashboardStats>('/dashboard/stats');
     if (response.success && response.data) {
       setStats(response.data);
     }
-    setLoading(false);
+    if (showLoading) {
+      setLoading(false);
+    }
   };
+
+  // No auto-refresh; fetch once on mount
 
   if (loading || !stats) {
     return (
@@ -32,14 +38,14 @@ export default function ApplicationStatusChart() {
     );
   }
 
+  const toTitleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
+
   const chartOptions: any = {
     chart: {
       type: 'donut',
       fontFamily: 'Outfit, sans-serif',
     },
-    labels: stats.applicationsByStatus.map((item) =>
-      item.status.replace('_', ' ')
-    ),
+    labels: stats.applicationsByStatus.map((item) => toTitleCase(String(item.status))),
     colors: ['#FCD34D', '#3B82F6', '#10B981', '#EF4444', '#6B7280'],
     legend: {
       position: 'bottom',

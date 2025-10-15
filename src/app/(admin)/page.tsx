@@ -21,7 +21,7 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* <DashboardStats />
+      <DashboardStats />
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         <div className="col-span-12 lg:col-span-8">
@@ -31,7 +31,7 @@ export default function AdminDashboard() {
         <div className="col-span-12 lg:col-span-4">
           <ApplicationStatusChart />
         </div>
-      </div> */}
+      </div>
     </div>
   );
 }

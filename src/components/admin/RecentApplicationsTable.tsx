@@ -10,8 +10,10 @@ export default function RecentApplicationsTable() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchApplications = useCallback(async () => {
-    setLoading(true);
+  const fetchApplications = useCallback(async (showLoading: boolean = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     const response = await apiClient.get<PaginatedResponse<Application>>('/applications', {
       page: '1',
       limit: '5',
@@ -21,12 +23,16 @@ export default function RecentApplicationsTable() {
     if (response.success && response.data) {
       setApplications(response.data.data || []);
     }
-    setLoading(false);
+    if (showLoading) {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     fetchApplications();
   }, [fetchApplications]);
+
+  // No auto-refresh; fetch once on mount
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -90,7 +96,7 @@ export default function RecentApplicationsTable() {
                         app.status
                       )}`}
                     >
-                      {app.status.replace('_', ' ')}
+                      {app.status.replace('_', ' ').replace(/\b\w/g, (m) => m.toUpperCase())}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">

@@ -11,18 +11,24 @@ export default function DashboardStats() {
   const [stats, setStats] = useState<IDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchStats = useCallback(async () => {
-    setLoading(true);
+  const fetchStats = useCallback(async (showLoading: boolean = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     const response = await apiClient.get<IDashboardStats>('/dashboard/stats');
     if (response.success && response.data) {
       setStats(response.data);
     }
-    setLoading(false);
+    if (showLoading) {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  // No auto-refresh; fetch once on mount
 
   const metrics = useMemo(() => {
     if (!stats) return [];
@@ -30,7 +36,7 @@ export default function DashboardStats() {
     return [
       {
         title: 'Total Applications',
-        value: stats.totalApplications,
+        value: stats.totalApplications.toLocaleString(),
         icon: <BoxIconLine className="text-gray-800 dark:text-white/90" />,
         change: stats.newApplicationsToday,
         changeLabel: 'today',
@@ -38,7 +44,7 @@ export default function DashboardStats() {
       },
       {
         title: 'Total Users',
-        value: stats.totalUsers,
+        value: stats.totalUsers.toLocaleString(),
         icon: <GroupIcon className="text-gray-800 size-6 dark:text-white/90" />,
         change: stats.newUsersToday,
         changeLabel: 'today',
@@ -54,9 +60,9 @@ export default function DashboardStats() {
       },
       {
         title: 'Pending Applications',
-        value: stats.pendingApplications,
+        value: stats.pendingApplications.toLocaleString(),
         icon: <BoxIconLine className="text-gray-800 dark:text-white/90" />,
-        subValue: `${stats.approvedApplications} approved`,
+        subValue: `${stats.approvedApplications.toLocaleString()} approved, ${stats.rejectedApplications.toLocaleString()} rejected`,
         positive: false,
       },
     ];
