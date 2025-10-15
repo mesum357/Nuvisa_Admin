@@ -14,7 +14,7 @@ export default function RecentApplicationsTable() {
     if (showLoading) {
       setLoading(true);
     }
-    const response = await apiClient.get<PaginatedResponse<Application>>('/applications', {
+    const response = await apiClient.get<PaginatedResponse<Application>>('/backend/applications', {
       page: '1',
       limit: '5',
       sortBy: 'submittedAt',

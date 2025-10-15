@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { backendGet } from '@/lib/backend-client';
 import { DashboardStats } from '@/types';
 
 export async function GET() {
@@ -15,86 +15,49 @@ export async function GET() {
       );
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Proxy to backend /orders/stats and normalize to DashboardStats shape
+    const sessionUserEmail = (session.user as any)?.email as string | undefined;
+    console.log('Fetching stats for user:', sessionUserEmail);
+    const res = await backendGet('/orders/stats', undefined, sessionUserEmail);
+    console.log('Backend response:', { ok: res.ok, status: res.status, data: res.data });
+    if (!res.ok) {
+      return NextResponse.json(res.data || { error: 'Backend error' }, { status: res.status });
+    }
 
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const envelope = (res.data as any) || {};
+    const data = envelope?.data || envelope;
 
-    const [
-      totalApplications,
-      totalUsers,
-      pendingApplications,
-      approvedApplications,
-      rejectedApplications,
-      newApplicationsToday,
-      newUsersToday,
-      revenueData,
-      monthlyRevenue,
-      applicationsByStatus,
-      recentApplications,
-    ] = await Promise.all([
-      prisma.application.count(),
-      prisma.user.count(),
-      prisma.application.count({ where: { status: 'PENDING' } }),
-      prisma.application.count({ where: { status: 'APPROVED' } }),
-      prisma.application.count({ where: { status: 'REJECTED' } }),
-      prisma.application.count({
-        where: { submittedAt: { gte: today } },
-      }),
-      prisma.user.count({
-        where: { createdAt: { gte: today } },
-      }),
-      prisma.application.aggregate({
-        _sum: { paidAmount: true },
-      }),
-      prisma.application.aggregate({
-        _sum: { paidAmount: true },
-        where: { submittedAt: { gte: firstDayOfMonth } },
-      }),
-      prisma.application.groupBy({
-        by: ['status'],
-        _count: { status: true },
-      }),
-      prisma.application.findMany({
-        take: 5,
-        orderBy: { submittedAt: 'desc' },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-      }),
-    ]);
+    // Backend returns: { total, pending, in_progress, completed, rejected }
+    const total = Number(data?.total ?? 0);
+    const pending = Number(data?.pending ?? 0);
+    const inProgress = Number(data?.in_progress ?? 0);
+    const completed = Number(data?.completed ?? 0);
+    const rejected = Number(data?.rejected ?? 0);
 
-    const stats: DashboardStats = {
-      totalApplications,
-      totalUsers,
-      totalRevenue: Number(revenueData._sum.paidAmount || 0),
-      pendingApplications,
-      approvedApplications,
-      rejectedApplications,
-      newApplicationsToday,
-      newUsersToday,
-      revenueThisMonth: Number(monthlyRevenue._sum.paidAmount || 0),
-      applicationsByStatus: applicationsByStatus.map((item) => ({
-        status: item.status,
-        count: item._count.status,
-      })),
-      recentApplications: recentApplications.map((app) => ({
-        ...app,
-        totalAmount: Number(app.totalAmount),
-        paidAmount: Number(app.paidAmount),
-      })) as any,
+    const normalized: DashboardStats = {
+      totalApplications: total,
+      totalUsers: 0,
+      totalRevenue: 0,
+      pendingApplications: pending,
+      approvedApplications: completed, // backend groups completed+approved, map to approved
+      rejectedApplications: rejected,
+      newApplicationsToday: 0,
+      newUsersToday: 0,
+      revenueThisMonth: 0,
+      applicationsByStatus: [
+        { status: 'PENDING' as any, count: pending },
+        { status: 'UNDER_REVIEW' as any, count: inProgress },
+        { status: 'APPROVED' as any, count: completed },
+        { status: 'REJECTED' as any, count: rejected },
+      ],
+      recentApplications: [],
     };
 
-    return NextResponse.json({ success: true, data: stats });
-  } catch (_error) {
+    return NextResponse.json({ success: true, data: normalized });
+  } catch (error) {
+    console.error('Dashboard stats error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch dashboard stats' },
+      { error: 'Failed to fetch dashboard stats', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
