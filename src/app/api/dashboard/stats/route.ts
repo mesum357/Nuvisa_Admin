@@ -66,7 +66,7 @@ export async function GET() {
 
     // Calculate today's applications (ensure applicationsData is an array)
     const todayApplications = Array.isArray(applicationsData) ? applicationsData.filter((app: any) => {
-      const appDate = new Date(app.createdAt);
+      const appDate = new Date(app.createdAt || app.created_at || new Date());
       return appDate >= startOfToday && appDate < endOfToday;
     }) : [];
 
@@ -79,7 +79,7 @@ export async function GET() {
     // Calculate this month's revenue (ensure applicationsData is an array)
     const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const thisMonthRevenue = Array.isArray(applicationsData) ? applicationsData.filter((app: any) => {
-      const appDate = new Date(app.createdAt);
+      const appDate = new Date(app.createdAt || app.created_at || new Date());
       return appDate >= thisMonthStart && appDate < today;
     }).reduce((sum: number, app: any) => {
       return sum + (Number(app.amountPaid) || 0);
@@ -96,10 +96,10 @@ export async function GET() {
       newUsersToday: Array.isArray(todayUsers) ? todayUsers.length : 0,
       revenueThisMonth: thisMonthRevenue,
       applicationsByStatus: [
-        { status: 'PENDING' as any, count: pendingApplications },
-        { status: 'UNDER_REVIEW' as any, count: inProgress },
-        { status: 'APPROVED' as any, count: completed },
-        { status: 'REJECTED' as any, count: rejected },
+        { status: 'PENDING' as any, count: pendingApplications || 0 },
+        { status: 'UNDER_REVIEW' as any, count: inProgress || 0 },
+        { status: 'APPROVED' as any, count: completed || 0 },
+        { status: 'REJECTED' as any, count: rejected || 0 },
       ],
       recentApplications: Array.isArray(todayApplications) ? todayApplications.slice(0, 5) : [], // Show today's applications instead of recent
     };

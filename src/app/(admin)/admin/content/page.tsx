@@ -114,7 +114,7 @@ export default function ContentPage() {
             <div className="space-y-4">
               {group.keys.map((key) => {
                 const content = contents.find((c) => c.key === key);
-                const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+                const displayKey = (key || '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 
                 return (
                   <div key={key} className="space-y-2">

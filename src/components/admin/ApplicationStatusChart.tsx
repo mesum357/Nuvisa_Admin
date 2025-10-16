@@ -38,7 +38,7 @@ export default function ApplicationStatusChart() {
     );
   }
 
-  const toTitleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
+  const toTitleCase = (s: string) => (s || '').replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
 
   const chartOptions: any = {
     chart: {
