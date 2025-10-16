@@ -55,6 +55,45 @@ export default function ApplicationDetailsPage() {
       (normalized as any).numberOfTravellers = d.numberOfTravellers;
       (normalized as any).insuranceDetails = d.insuranceDetails;
       (normalized as any).travelersData = d.travelersData;
+
+      // Normalize documents from backend shape (travelersData[].documents.documents)
+      try {
+        const travelers: any[] = Array.isArray(d.travelersData) ? d.travelersData : [];
+        const flattenedDocs: any[] = [];
+        for (const traveler of travelers) {
+          const docContainer = traveler?.documents?.documents || traveler?.documents;
+          if (!docContainer || typeof docContainer !== 'object') continue;
+          const docTypes = Object.keys(docContainer);
+          for (const docType of docTypes) {
+            const value = docContainer[docType];
+            const pushDoc = (item: any) => {
+              if (!item) return;
+              const fileUrl = item.preview || item.fileUrl || item.url;
+              const fileName = item.name || item.fileName || docType;
+              const fileSize = Number(item.size || item.fileSize || 0);
+              const uploadedAt = item.uploadedAt || traveler?.createdAt || d.updatedAt || d.createdAt || new Date().toISOString();
+              flattenedDocs.push({
+                id: `${docType}-${fileName}-${fileUrl}`,
+                applicationId: String(normalized.id),
+                documentType: docType,
+                fileName,
+                fileUrl,
+                fileSize,
+                uploadedAt,
+                isVerified: Boolean(item.isVerified),
+              });
+            };
+            if (Array.isArray(value)) {
+              value.forEach(pushDoc);
+            } else if (value && typeof value === 'object') {
+              pushDoc(value);
+            }
+          }
+        }
+        if (flattenedDocs.length > 0) {
+          (normalized as any).documents = flattenedDocs;
+        }
+      } catch {}
       setApplication(normalized as any);
       setNewStatus(normalized.status);
     }

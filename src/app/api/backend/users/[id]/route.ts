@@ -21,10 +21,43 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
     const headers = getBackendHeaders(token);
 
-    const res = await fetch(getBackendUrl(BACKEND_CONFIG.ENDPOINTS.ORDERS.USER_BY_ID(id)), {
+    let res = await fetch(getBackendUrl(BACKEND_CONFIG.ENDPOINTS.ORDERS.USER_BY_ID(id)), {
       method: 'GET',
       headers,
     });
+
+    // If direct GET by id is not supported (404), fallback to users search and filter by id
+    if (res.status === 404) {
+      const searchUrl = new URL(getBackendUrl(BACKEND_CONFIG.ENDPOINTS.ORDERS.USERS));
+      searchUrl.searchParams.set('page', '1');
+      searchUrl.searchParams.set('limit', '5');
+      searchUrl.searchParams.set('search', id);
+
+      res = await fetch(searchUrl.toString(), {
+        method: 'GET',
+        headers,
+      });
+
+      const srch = await res.json().catch(() => ({} as any));
+      if (!res.ok) {
+        return NextResponse.json({ error: srch?.message || 'Failed to fetch user' }, { status: res.status });
+      }
+
+      const envelope: any = srch?.data ?? srch;
+      const inner: any = envelope?.results ?? envelope?.data ?? envelope;
+      const rows: any[] = Array.isArray(inner?.users)
+        ? inner.users
+        : Array.isArray(inner?.data)
+          ? inner.data
+          : Array.isArray(inner)
+            ? inner
+            : [];
+      const user = rows.find((u: any) => u?.id === id || u?.user_id === id || u?.userId === id) || rows[0];
+      if (!user) {
+        return NextResponse.json({ error: 'NotFoundException' }, { status: 404 });
+      }
+      return NextResponse.json({ success: true, data: user });
+    }
 
     const data = await res.json().catch(() => ({} as any));
     if (!res.ok) {
