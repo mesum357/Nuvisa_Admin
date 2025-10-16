@@ -63,8 +63,9 @@ export const backendGet = async (path: string, params?: Record<string, any>, req
       }
     });
   }
-  const token = await ensureToken(requesterEmail);
-  const headers = getBackendHeaders(token);
+  // Use admin proxy headers instead of trying to get JWT token
+  // This bypasses the need for user authentication since we're the admin panel
+  const headers = getBackendHeaders();
   const res = await fetch(url.toString(), { cache: 'no-store', headers });
   let data: any = null;
   try {
@@ -78,8 +79,8 @@ export const backendGet = async (path: string, params?: Record<string, any>, req
 
 export const backendPatch = async (path: string, body?: any, requesterEmail?: string) => {
   const url = getBackendUrl(path);
-  const token = await ensureToken(requesterEmail);
-  const headers = getBackendHeaders(token);
+  // Use admin proxy headers instead of trying to get JWT token
+  const headers = getBackendHeaders();
   const res = await fetch(url, { method: 'PATCH', headers, cache: 'no-store', body: body ? JSON.stringify(body) : undefined });
   let data: any = null;
   try {

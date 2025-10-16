@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import React from "react";
 import DashboardStats from "@/components/admin/DashboardStats";
 import RecentApplicationsTable from "@/components/admin/RecentApplicationsTable";
-import ApplicationStatusChart from "@/components/admin/ApplicationStatusChart";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard | Nuvisa Admin System",
@@ -24,12 +23,8 @@ export default function AdminDashboard() {
       <DashboardStats />
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
-        <div className="col-span-12 lg:col-span-8">
+        <div className="col-span-12">
           <RecentApplicationsTable />
-        </div>
-
-        <div className="col-span-12 lg:col-span-4">
-          <ApplicationStatusChart />
         </div>
       </div>
     </div>

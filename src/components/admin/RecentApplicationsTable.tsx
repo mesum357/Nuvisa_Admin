@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
-import { Application, PaginatedResponse } from '@/types';
+import { Application } from '@/types';
 import { formatDate, getStatusColor } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -14,14 +14,10 @@ export default function RecentApplicationsTable() {
     if (showLoading) {
       setLoading(true);
     }
-    const response = await apiClient.get<PaginatedResponse<Application>>('/backend/applications', {
-      page: '1',
-      limit: '5',
-      sortBy: 'submittedAt',
-      sortOrder: 'desc',
-    });
+    // Get today's applications from dashboard stats instead of recent applications
+    const response = await apiClient.get<{ data: { recentApplications: Application[] } }>('/dashboard/stats');
     if (response.success && response.data) {
-      setApplications(response.data.data || []);
+      setApplications(response.data.recentApplications || []);
     }
     if (showLoading) {
       setLoading(false);
@@ -38,7 +34,7 @@ export default function RecentApplicationsTable() {
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
         <h3 className="text-base font-medium text-gray-800 dark:text-white/90">
-          Recent Applications
+          Today's Applications
         </h3>
       </div>
 

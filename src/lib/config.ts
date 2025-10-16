@@ -5,11 +5,11 @@
 
 /**
  * Centralized configuration for backend API URLs
- * STRICT STATIC CONFIGURATION - No environment variable fallbacks
+ * PRODUCTION CONFIGURATION - Uses live backend
  */
 
 export const BACKEND_CONFIG = {
-  // STRICT STATIC backend API URL - Always uses production backend
+  // Production backend API URL
   BASE_URL: 'https://app.nuvisa.co.uk',
   
   // Admin origin for CORS headers
