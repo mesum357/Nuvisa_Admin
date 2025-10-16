@@ -223,23 +223,14 @@ model SystemStats {
   @@map("system_stats")
 }
 
-model Country {
+model AppointmentText {
   id             String   @id @default(uuid())
-  name           String   @unique
-  slug           String   @unique
-  image          String   @db.Text
-  landmark       String
-  visaFee        Decimal  @default(159) @db.Decimal(10, 2)
-  insuranceFee   Decimal  @default(400) @db.Decimal(10, 2)
+  countryName    String   @unique
   appointmentText String  @default("Appointment in 10 days or less")
-  isActive       Boolean  @default(true)
-  displayOrder   Int      @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   updatedBy      String?
 
-  @@index([isActive])
-  @@index([displayOrder])
-  @@map("countries")
+  @@map("appointment_texts")
 }
 

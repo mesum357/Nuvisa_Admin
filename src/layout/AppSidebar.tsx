@@ -49,8 +49,8 @@ const baseNavItems: NavItem[] = [
   },
   {
     icon: <PageIcon />,
-    name: "Countries",
-    path: "/admin/countries",
+    name: "Appointment Text",
+    path: "/admin/appointment-text",
   }
 ];
 
@@ -68,7 +68,7 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/applications')) return can('applications', 'read');
       if (item.path.startsWith('/admin/users')) return can('users', 'read');
       if (item.path.startsWith('/admin/admins')) return can('users', 'read');
-      if (item.path.startsWith('/admin/countries')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/appointment-text')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/roles')) return can('roles', 'read');
       return true;
     });
