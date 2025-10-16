@@ -17,7 +17,7 @@ export default function RecentApplicationsTable() {
     // Get today's applications from dashboard stats instead of recent applications
     const response = await apiClient.get<{ data: { recentApplications: Application[] } }>('/dashboard/stats');
     if (response.success && response.data) {
-      setApplications(response.data.recentApplications || []);
+      setApplications((response.data as any).recentApplications || []);
     }
     if (showLoading) {
       setLoading(false);
@@ -34,7 +34,7 @@ export default function RecentApplicationsTable() {
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
         <h3 className="text-base font-medium text-gray-800 dark:text-white/90">
-          Today's Applications
+          Today&apos;s Applications
         </h3>
       </div>
 
