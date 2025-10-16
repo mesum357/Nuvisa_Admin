@@ -68,7 +68,21 @@ export async function GET() {
     const todayApplications = Array.isArray(applicationsData) ? applicationsData.filter((app: any) => {
       const appDate = new Date(app.createdAt || app.created_at || new Date());
       return appDate >= startOfToday && appDate < endOfToday;
-    }) : [];
+    }).map((app: any) => ({
+      id: app.id || app.applicationId || app.orderId,
+      applicationNo: app.applicationNo || app.code || app.orderId || app.id,
+      status: app.status || app.applicationStatus || 'PENDING',
+      totalAmount: Number(app.totalAmount || app.amountPaid || app.amountPaidTotal || 0),
+      paidAmount: Number(app.paidAmount || app.amountPaid || app.amountPaidTotal || 0),
+      submittedAt: app.submittedAt || app.createdAt || app.created_at || new Date().toISOString(),
+      userId: app.userId || app.email || app.user?.id,
+      updatedAt: app.updatedAt || app.updated_at || app.createdAt || app.created_at || new Date().toISOString(),
+      user: app.user || { 
+        id: app.email || app.userId, 
+        name: app.userName || app.name || app.email, 
+        email: app.email 
+      }
+    })) : [];
 
     // Calculate today's users (ensure usersData is an array)
     const todayUsers = Array.isArray(usersData) ? usersData.filter((user: any) => {
