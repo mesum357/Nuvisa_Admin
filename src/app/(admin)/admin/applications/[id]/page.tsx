@@ -603,7 +603,7 @@ export default function ApplicationDetailsPage() {
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           {Object.entries(traveler.insurance).map(([key, value]) => (
                             <div key={key}>
-                              <span className="text-gray-500 dark:text-gray-400">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span>
+                              <span className="text-gray-500 dark:text-gray-400">{(key || '').replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span>
                               <span className="ml-2 text-gray-900 dark:text-white">{String(value)}</span>
                             </div>
                           ))}

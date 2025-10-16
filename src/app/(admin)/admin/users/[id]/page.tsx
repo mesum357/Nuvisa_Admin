@@ -86,7 +86,7 @@ export default function UserDetailsPage() {
           )}
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
-            <p className="text-base font-medium text-gray-900 dark:text-white mt-1">{String(user.status).replace('_', ' ')}</p>
+            <p className="text-base font-medium text-gray-900 dark:text-white mt-1">{(user.status || '').replace('_', ' ')}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Verified</p>

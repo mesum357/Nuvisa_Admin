@@ -62,8 +62,8 @@ export function getApplicationStatusEmailTemplate(
           <div class="content">
             <p>Dear ${userName},</p>
             <p>Your application <strong>${applicationNo}</strong> status has been updated.</p>
-            <div class="status ${status.toLowerCase().replace('_', '-')}">
-              Status: ${status.replace('_', ' ')}
+            <div class="status ${(status || '').toLowerCase().replace('_', '-')}">
+              Status: ${(status || '').replace('_', ' ')}
             </div>
             ${message ? `<p>${message}</p>` : ''}
             <p>You can log in to your account to view more details.</p>

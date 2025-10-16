@@ -166,7 +166,7 @@ function UsersContent() {
                           user.status
                         )}`}
                       >
-                        {user.status.replace('_', ' ')}
+                        {(user.status || '').replace('_', ' ')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">

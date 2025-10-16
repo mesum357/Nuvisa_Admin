@@ -87,7 +87,7 @@ export function downloadCSV(data: any[], filename: string): void {
       headers.map(header => {
         const value = row[header];
         const stringValue = value === null || value === undefined ? '' : String(value);
-        return `"${stringValue.replace(/"/g, '""')}"`;
+        return `"${(stringValue || '').replace(/"/g, '""')}"`;
       }).join(',')
     ),
   ].join('\n');
@@ -104,6 +104,7 @@ export function downloadCSV(data: any[], filename: string): void {
 }
 
 export function getInitials(name: string): string {
+  if (!name) return '';
   return name
     .split(' ')
     .map(part => part[0])
