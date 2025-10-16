@@ -181,7 +181,7 @@ function UsersContent() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm space-x-3">
                       <a
-                        href={`/admin/users/${user.id}`}
+                        href={`/admin/users/${encodeURIComponent(user.email || user.id)}`}
                         className="text-brand-600 hover:text-brand-700 dark:text-brand-400"
                       >
                         View
