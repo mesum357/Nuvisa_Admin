@@ -202,6 +202,49 @@ export default function ApplicationDetailsPage() {
             </div>
           </ComponentCard>
 
+          <ComponentCard title="Documents">
+            {!application.documents || application.documents.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No documents uploaded</p>
+            ) : (
+              <div className="divide-y divide-gray-200 dark:divide-gray-800">
+                {application.documents.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {doc.fileName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {doc.documentType} • {(doc.fileSize / (1024 * 1024)).toFixed(2)} MB • Uploaded {formatDate(doc.uploadedAt, 'datetime')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {doc.isVerified ? (
+                        <span className="text-xs text-green-600 dark:text-green-400">Verified</span>
+                      ) : (
+                        <span className="text-xs text-yellow-600 dark:text-yellow-400">Pending</span>
+                      )}
+                      <a
+                        href={doc.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400"
+                      >
+                        View
+                      </a>
+                      <a
+                        href={doc.fileUrl}
+                        download
+                        className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300"
+                      >
+                        Download
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ComponentCard>
+
           {application.comments && application.comments.length > 0 && (
             <ComponentCard title="Comments & Notes">
               <div className="space-y-4">
