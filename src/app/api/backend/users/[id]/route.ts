@@ -52,10 +52,29 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           : Array.isArray(inner)
             ? inner
             : [];
-      const user = rows.find((u: any) => u?.id === id || u?.user_id === id || u?.userId === id) || rows[0];
+      let user = rows.find((u: any) => u?.id === id || u?.user_id === id || u?.userId === id || u?.email === id) || rows[0];
       if (!user) {
-        return NextResponse.json({ error: 'NotFoundException' }, { status: 404 });
+        // Try applicants as a fallback source
+        const applicantsUrl = new URL(getBackendUrl(BACKEND_CONFIG.ENDPOINTS.ORDERS.APPLICANTS));
+        applicantsUrl.searchParams.set('page', '1');
+        applicantsUrl.searchParams.set('limit', '5');
+        applicantsUrl.searchParams.set('search', id);
+        const ar = await fetch(applicantsUrl.toString(), { method: 'GET', headers });
+        const aj = await ar.json().catch(() => ({} as any));
+        if (ar.ok) {
+          const aenv: any = aj?.data ?? aj;
+          const ain: any = aenv?.results ?? aenv?.data ?? aenv;
+          const arows: any[] = Array.isArray(ain?.users)
+            ? ain.users
+            : Array.isArray(ain?.data)
+              ? ain.data
+              : Array.isArray(ain)
+                ? ain
+                : [];
+          user = arows.find((u: any) => u?.id === id || u?.user_id === id || u?.userId === id || u?.email === id) || arows[0];
+        }
       }
+      if (!user) return NextResponse.json({ error: 'NotFoundException' }, { status: 404 });
       return NextResponse.json({ success: true, data: user });
     }
 
