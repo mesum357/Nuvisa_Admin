@@ -55,6 +55,8 @@ export default function ApplicationDetailsPage() {
       (normalized as any).numberOfTravellers = d.numberOfTravellers;
       (normalized as any).insuranceDetails = d.insuranceDetails;
       (normalized as any).travelersData = d.travelersData;
+      // Appointment preferences (top-level or first traveler fallback)
+      (normalized as any).appointment = d.appointment || (Array.isArray(d.travelersData) && d.travelersData[0]?.appointment) || undefined;
 
       // Normalize documents from backend shape (travelersData[].documents.documents)
       try {
@@ -263,6 +265,53 @@ export default function ApplicationDetailsPage() {
               )}
             </div>
           </ComponentCard>
+
+          {/* Appointment Preferences */}
+          {(application as any).appointment && (
+            <ComponentCard title="Appointment Preferences">
+              {(() => {
+                const appt: any = (application as any).appointment || {};
+                const pref1: any = appt.preference1 || {};
+                const pref2: any = appt.preference2 || {};
+                const formatRange = (p: any) => {
+                  if (p.dateRange) return p.dateRange;
+                  const start = p.dateRangeStart ? new Date(p.dateRangeStart) : null;
+                  const end = p.dateRangeEnd ? new Date(p.dateRangeEnd) : null;
+                  const fmt = (d: Date | null) => (d ? `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` : '');
+                  if (!start && !end) return '';
+                  return `${fmt(start)} - ${fmt(end)}`;
+                };
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Preference 1 City</p>
+                      <p className="text-base font-medium text-gray-900 dark:text-white mt-1">{pref1.city || '-'}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Preference 1 Date Range</p>
+                      <p className="text-base font-medium text-gray-900 dark:text-white mt-1">{formatRange(pref1) || '-'}</p>
+                      {pref1.slot && (
+                        <>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Preference 1 Slot</p>
+                          <p className="text-base font-medium text-gray-900 dark:text-white mt-1">{pref1.slot}</p>
+                        </>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Preference 2 City</p>
+                      <p className="text-base font-medium text-gray-900 dark:text-white mt-1">{pref2.city || '-'}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Preference 2 Date Range</p>
+                      <p className="text-base font-medium text-gray-900 dark:text-white mt-1">{formatRange(pref2) || '-'}</p>
+                      {pref2.slot && (
+                        <>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Preference 2 Slot</p>
+                          <p className="text-base font-medium text-gray-900 dark:text-white mt-1">{pref2.slot}</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </ComponentCard>
+          )}
 
           <ComponentCard title="User Information">
             <div className="grid grid-cols-2 gap-4">
@@ -705,11 +754,13 @@ export default function ApplicationDetailsPage() {
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value as ApplicationStatus)}
                 >
-                  <option value="PENDING">Pending</option>
+                  {/* Map requested labels to internal statuses */}
+                  <option value="PENDING">Submitted</option>
                   <option value="UNDER_REVIEW">Under Review</option>
+                  <option value="UNDER_REVIEW">Appointment Booked</option>
+                  <option value="UNDER_REVIEW">At Embassy</option>
                   <option value="APPROVED">Approved</option>
                   <option value="REJECTED">Rejected</option>
-                  <option value="COMPLETED">Completed</option>
                 </select>
               </div>
 
