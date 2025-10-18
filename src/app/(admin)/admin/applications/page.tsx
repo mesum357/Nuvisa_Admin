@@ -21,6 +21,7 @@ function ApplicationsContent() {
   });
   const [filters, setFilters] = useState({
     search: '',
+    country: '',
     sortBy: 'submittedAt',
     sortOrder: 'desc' as 'asc' | 'desc',
   });
@@ -29,13 +30,16 @@ function ApplicationsContent() {
 
   const fetchApplications = useCallback(async () => {
     setLoading(true);
-    const response = await apiClient.get<PaginatedResponse<Application>>('/backend/applications', {
+    const params: Record<string, string> = {
       page: pagination.page.toString(),
       limit: pagination.limit.toString(),
-      search: debouncedSearch,
       sortBy: filters.sortBy,
       sortOrder: filters.sortOrder,
-    });
+    };
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (filters.country) params.country = filters.country;
+
+    const response = await apiClient.get<PaginatedResponse<Application>>('/backend/applications', params);
     if (response.success && response.data) {
       const list = Array.isArray(response.data.data) ? response.data.data : [];
       setApplications(list);
@@ -48,7 +52,7 @@ function ApplicationsContent() {
       }
     }
     setLoading(false);
-  }, [pagination.page, pagination.limit, debouncedSearch, filters.sortBy, filters.sortOrder]);
+  }, [pagination.page, pagination.limit, debouncedSearch, filters.country, filters.sortBy, filters.sortOrder]);
 
   useEffect(() => {
     fetchApplications();
@@ -96,6 +100,16 @@ function ApplicationsContent() {
               value={filters.search}
               onChange={(e) => handleSearch(e.target.value)}
             />
+            <input
+              type="text"
+              placeholder="Filter by country..."
+              className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              value={filters.country}
+              onChange={(e) => {
+                setFilters((prev) => ({ ...prev, country: e.target.value }));
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+            />
           </div>
         </div>
 
@@ -108,6 +122,9 @@ function ApplicationsContent() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Country
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
@@ -126,13 +143,13 @@ function ApplicationsContent() {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center">
+                  <td colSpan={7} className="px-6 py-4 text-center">
                     <div className="animate-pulse">Loading...</div>
                   </td>
                 </tr>
               ) : applications.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     No applications found
                   </td>
                 </tr>
@@ -149,6 +166,9 @@ function ApplicationsContent() {
                       <div className="text-sm text-gray-500 dark:text-gray-400">
                         {app.user?.email}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {(app as any).country || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span

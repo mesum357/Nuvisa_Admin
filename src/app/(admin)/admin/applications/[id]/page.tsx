@@ -35,13 +35,26 @@ export default function ApplicationDetailsPage() {
         if (v === 'rejected' || v === 'cancelled') return 'REJECTED' as ApplicationStatus;
         return (v as ApplicationStatus) || ('PENDING' as ApplicationStatus);
       };
+      // Calculate total payment from all travelers
+      const calculateTotalPayment = (travelers: any[]) => {
+        if (!Array.isArray(travelers)) return 0;
+        return travelers.reduce((total, traveler) => {
+          const fullPaymentAmount = Number(traveler?.fullPayment?.paymentAmount || 0);
+          const insuranceAmount = Number(traveler?.insurance?.paymentAmount || 0);
+          return total + fullPaymentAmount + insuranceAmount;
+        }, 0);
+      };
+
+      const travelers = Array.isArray(d.travelersData) ? d.travelersData : [];
+      const totalPaymentFromTravelers = calculateTotalPayment(travelers);
+
       // Normalize if backend payload is returned directly
       const normalized: Application = {
         id: d.id || d.applicationId || String(params.id),
-        applicationNo: d.applicationNo || d.code || d.orderId || d.id,
+        applicationNo: d.orderId || d.applicationNo || d.code || d.id?.slice(0, 8) || String(params.id).slice(0, 8),
         status: mapBackendStatus(d.status || d.applicationStatus),
-        totalAmount: Number(d.totalAmount ?? d.amountPaid ?? d.amountPaidTotal ?? 0),
-        paidAmount: Number(d.paidAmount ?? d.amountPaid ?? d.amountPaidTotal ?? 0),
+        totalAmount: totalPaymentFromTravelers || Number(d.totalAmount ?? d.amountPaidTotal ?? d.amountPaid ?? 0),
+        paidAmount: totalPaymentFromTravelers || Number(d.paidAmount ?? d.amountPaidTotal ?? d.amountPaid ?? 0),
         submittedAt: d.submittedAt || d.createdAt || d.paymentDate || new Date().toISOString(),
         user: d.user || { id: d.email, name: d.email, email: d.email },
       } as any;
@@ -60,22 +73,25 @@ export default function ApplicationDetailsPage() {
 
       // Normalize documents from backend shape (travelersData[].documents.documents)
       try {
-        const travelers: any[] = Array.isArray(d.travelersData) ? d.travelersData : [];
         const flattenedDocs: any[] = [];
-        for (const traveler of travelers) {
+        for (let travelerIndex = 0; travelerIndex < travelers.length; travelerIndex++) {
+          const traveler = travelers[travelerIndex];
+          const travelerName = `${traveler?.basicDetails?.firstName || 'Traveler'} ${traveler?.basicDetails?.lastName || travelerIndex + 1}`.trim();
+          const travelerId = traveler?.id || `traveler-${travelerIndex}`;
+          
           const docContainer = traveler?.documents?.documents || traveler?.documents;
           if (!docContainer || typeof docContainer !== 'object') continue;
           const docTypes = Object.keys(docContainer);
           for (const docType of docTypes) {
             const value = docContainer[docType];
-            const pushDoc = (item: any) => {
+            const pushDoc = (item: any, docIndex: number = 0) => {
               if (!item) return;
               const fileUrl = item.preview || item.fileUrl || item.url;
               const fileName = item.name || item.fileName || docType;
               const fileSize = Number(item.size || item.fileSize || 0);
               const uploadedAt = item.uploadedAt || traveler?.createdAt || d.updatedAt || d.createdAt || new Date().toISOString();
               flattenedDocs.push({
-                id: `${docType}-${fileName}-${fileUrl}`,
+                id: `${travelerId}-${docType}-${docIndex}-${fileName}`,
                 applicationId: String(normalized.id),
                 documentType: docType,
                 fileName,
@@ -83,12 +99,15 @@ export default function ApplicationDetailsPage() {
                 fileSize,
                 uploadedAt,
                 isVerified: Boolean(item.isVerified),
+                travelerName,
+                travelerId,
+                travelerIndex: travelerIndex + 1,
               });
             };
             if (Array.isArray(value)) {
-              value.forEach(pushDoc);
+              value.forEach((item, idx) => pushDoc(item, idx));
             } else if (value && typeof value === 'object') {
-              pushDoc(value);
+              pushDoc(value, 0);
             }
           }
         }
@@ -687,41 +706,63 @@ export default function ApplicationDetailsPage() {
             {!application.documents || application.documents.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">No documents uploaded</p>
             ) : (
-              <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                {application.documents.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between py-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {doc.fileName}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {doc.documentType} • {(doc.fileSize / (1024 * 1024)).toFixed(2)} MB • Uploaded {formatDate(doc.uploadedAt, 'datetime')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {doc.isVerified ? (
-                        <span className="text-xs text-green-600 dark:text-green-400">Verified</span>
-                      ) : (
-                        <span className="text-xs text-yellow-600 dark:text-yellow-400">Pending</span>
-                      )}
-                      <a
-                        href={doc.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400"
-                      >
-                        View
-                      </a>
-                      <a
-                        href={doc.fileUrl}
-                        download
-                        className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300"
-                      >
-                        Download
-                      </a>
-                    </div>
-                  </div>
-                ))}
+              <div className="space-y-6">
+                {(() => {
+                  // Group documents by traveler
+                  const docsByTraveler: Record<string, any[]> = {};
+                  application.documents.forEach((doc: any) => {
+                    const travelerKey = doc.travelerId || 'unknown';
+                    if (!docsByTraveler[travelerKey]) {
+                      docsByTraveler[travelerKey] = [];
+                    }
+                    docsByTraveler[travelerKey].push(doc);
+                  });
+
+                  return Object.entries(docsByTraveler).map(([travelerId, docs]) => {
+                    const travelerName = docs[0]?.travelerName || `Traveler ${docs[0]?.travelerIndex || ''}`;
+                    return (
+                      <div key={travelerId} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{travelerName}</h4>
+                        <div className="divide-y divide-gray-200 dark:divide-gray-800">
+                          {docs.map((doc: any) => (
+                            <div key={doc.id} className="flex items-center justify-between py-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                  {doc.fileName}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {doc.documentType} • {(doc.fileSize / (1024 * 1024)).toFixed(2)} MB • Uploaded {formatDate(doc.uploadedAt, 'datetime')}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                {doc.isVerified ? (
+                                  <span className="text-xs text-green-600 dark:text-green-400">Verified</span>
+                                ) : (
+                                  <span className="text-xs text-yellow-600 dark:text-yellow-400">Pending</span>
+                                )}
+                                <a
+                                  href={doc.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400"
+                                >
+                                  View
+                                </a>
+                                <a
+                                  href={doc.fileUrl}
+                                  download
+                                  className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300"
+                                >
+                                  Download
+                                </a>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             )}
           </ComponentCard>

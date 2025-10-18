@@ -86,9 +86,26 @@ export async function PATCH(
 
     if (!currentApplication) {
       // Fallback to backend update when not found in local Prisma DB
-      const be = await backendPatch(`/orders/application/${id}/status`, { status }, (session.user as { email?: string })?.email);
+      // Map frontend status to backend status format
+      const mapStatusToBackend = (frontendStatus: string) => {
+        const statusMap: Record<string, string> = {
+          'PENDING': 'submitted',
+          'UNDER_REVIEW': 'under_review',
+          'APPROVED': 'approved',
+          'REJECTED': 'rejected',
+          'COMPLETED': 'completed'
+        };
+        return statusMap[frontendStatus] || frontendStatus.toLowerCase();
+      };
+
+      const backendStatus = status ? mapStatusToBackend(status) : undefined;
+      const be = await backendPatch(
+        `/orders/application/${id}/status`, 
+        { status: backendStatus, note: updateData.note, sendNotification }, 
+        (session.user as { email?: string })?.email
+      );
       if (be.ok) {
-        const app: unknown = be.data?.data || be.data || {};
+        const app: unknown = be.data?.data?.results || be.data?.data || be.data || {};
         // Return backend payload directly so details reflect exact record
         return NextResponse.json({ success: true, data: app });
       }

@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const limit = sp.get('limit') || '10';
     const status = sp.get('status') || '';
     const search = sp.get('search') || '';
+    const country = sp.get('country') || '';
 
     // Adjust to your backend endpoint and query params
     // Use the backend search endpoint to retrieve a list
@@ -29,12 +30,22 @@ export async function GET(request: NextRequest) {
       return undefined;
     };
 
-    const res = await backendGet('/orders/search', {
+    const queryParams: Record<string, any> = {
       page_no: page,
       page_size: limit,
       status: mapStatus(status) || undefined,
       q: search || undefined,
-    }, (session.user as any)?.email);
+      country: country || undefined,
+    };
+
+    // Remove undefined values
+    Object.keys(queryParams).forEach(key => {
+      if (queryParams[key] === undefined) {
+        delete queryParams[key];
+      }
+    });
+
+    const res = await backendGet('/orders/search', queryParams, (session.user as any)?.email);
     if (!res.ok) {
       return NextResponse.json(res.data || { error: 'Backend error' }, { status: res.status });
     }
@@ -80,20 +91,37 @@ export async function GET(request: NextRequest) {
       items = list;
     }
     // Normalize to Admin UI expected shape
-    const uiItems = (Array.isArray(items) ? items : list).map((it: any) => ({
-      id: it.id,
-      applicationNo: it.code || it.orderId || it.id,
-      status: typeof it.applicationStatus === 'string' ? it.applicationStatus : 'UNKNOWN',
-      totalAmount: Number(it.amountPaid ?? 0),
-      paidAmount: Number(it.amountPaid ?? 0),
-      submittedAt: it.createdAt,
-      user: {
-        id: it.email,
-        name: it.email,
-        email: it.email,
-        phone: undefined,
-      },
-    }));
+    const uiItems = (Array.isArray(items) ? items : list).map((it: any) => {
+      // Calculate total payment from all travelers
+      let totalPayment = 0;
+      if (Array.isArray(it.travelersData)) {
+        totalPayment = it.travelersData.reduce((sum: number, traveler: any) => {
+          const fullPayment = Number(traveler?.fullPayment?.paymentAmount || 0);
+          const insurance = Number(traveler?.insurance?.paymentAmount || 0);
+          return sum + fullPayment + insurance;
+        }, 0);
+      }
+      // Fallback to application-level payment if no traveler data
+      if (totalPayment === 0) {
+        totalPayment = Number(it.amountPaidTotal || it.amountPaid || 0);
+      }
+
+      return {
+        id: it.id,
+        applicationNo: it.orderId || it.code || it.applicationNo || it.id?.slice(0, 8),
+        status: typeof it.applicationStatus === 'string' ? it.applicationStatus : 'UNKNOWN',
+        totalAmount: totalPayment,
+        paidAmount: totalPayment,
+        submittedAt: it.createdAt,
+        country: it.country || '-',
+        user: {
+          id: it.email,
+          name: it.email,
+          email: it.email,
+          phone: undefined,
+        },
+      };
+    });
 
     return NextResponse.json({
       success: true,

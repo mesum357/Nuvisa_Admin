@@ -60,8 +60,30 @@ export async function GET() {
     const rejected = Number(statsData?.rejected ?? 0);
 
     // Calculate revenue from applications (ensure applicationsData is an array)
+    // Sum up all traveler payments for accurate revenue calculation
+    // Note: Revenue is calculated globally. To filter by assigned admin, add an 
+    // 'assignedAdminId' field to the Application model and filter here.
+    const currentUserEmail = (session.user as { email?: string })?.email;
+    const currentUserRole = (session.user as { role?: string })?.role;
+    
     const totalRevenue = Array.isArray(applicationsData) ? applicationsData.reduce((sum: number, app: any) => {
-      return sum + (Number(app.amountPaid) || 0);
+      // If admin assignment is implemented, filter here:
+      // if (currentUserRole !== 'SUPER_ADMIN' && app.assignedAdminEmail !== currentUserEmail) return sum;
+      
+      // Calculate total payment from all travelers
+      let appTotal = 0;
+      if (Array.isArray(app.travelersData)) {
+        appTotal = app.travelersData.reduce((tSum: number, traveler: any) => {
+          const fullPayment = Number(traveler?.fullPayment?.paymentAmount || 0);
+          const insurance = Number(traveler?.insurance?.paymentAmount || 0);
+          return tSum + fullPayment + insurance;
+        }, 0);
+      }
+      // Fallback to application-level payment if no traveler data
+      if (appTotal === 0) {
+        appTotal = Number(app.amountPaidTotal || app.amountPaid || 0);
+      }
+      return sum + appTotal;
     }, 0) : 0;
 
     // Calculate today's applications (ensure applicationsData is an array)
