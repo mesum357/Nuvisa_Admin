@@ -27,9 +27,9 @@ export async function GET() {
     }
 
     // Debug logging to understand data structure
-    console.log('Stats response:', { ok: statsRes.ok, data: statsRes.data });
-    console.log('Applications response:', { ok: applicationsRes.ok, data: applicationsRes.data });
-    console.log('Users response:', { ok: usersRes.ok, data: usersRes.data });
+    console.log('Stats response:', { ok: statsRes.ok, hasData: !!statsRes.data });
+    console.log('Applications response:', { ok: applicationsRes.ok, hasData: !!applicationsRes.data });
+    console.log('Users response:', { ok: usersRes.ok, hasData: !!usersRes.data });
 
     const statsData = statsRes.data?.data || statsRes.data || {};
     
@@ -38,13 +38,19 @@ export async function GET() {
     if (applicationsRes.ok && applicationsRes.data) {
       const appData = applicationsRes.data?.data?.results || applicationsRes.data?.results || applicationsRes.data?.data || applicationsRes.data;
       applicationsData = Array.isArray(appData) ? appData : (appData?.applications || []);
+      console.log('Extracted applications count:', applicationsData.length);
+    } else {
+      console.warn('Failed to fetch applications data');
     }
     
     // Safely extract users data with proper fallbacks
     let usersData = [];
     if (usersRes.ok && usersRes.data) {
       const userData = usersRes.data?.data?.results || usersRes.data?.results || usersRes.data?.data || usersRes.data;
-      usersData = Array.isArray(userData) ? userData : (userData?.users || []);
+      usersData = Array.isArray(userData) ? userData : (userData?.users || userData?.rows || []);
+      console.log('Extracted users count:', usersData.length);
+    } else {
+      console.warn('Failed to fetch users data');
     }
 
     // Calculate today's date range
@@ -53,7 +59,13 @@ export async function GET() {
     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
     // Calculate additional statistics
-    const totalApplications = Number(statsData?.total ?? 0);
+    // Use actual applications count as primary source, fallback to backend stats
+    const totalApplications = Array.isArray(applicationsData) && applicationsData.length > 0 
+      ? applicationsData.length 
+      : Number(statsData?.total ?? 0);
+    
+    console.log('Total applications calculated:', totalApplications, '(from array:', applicationsData.length, ', from stats:', statsData?.total, ')');
+    
     const pendingApplications = Number(statsData?.pending ?? 0);
     const inProgress = Number(statsData?.in_progress ?? 0);
     const completed = Number(statsData?.completed ?? 0);
@@ -66,25 +78,45 @@ export async function GET() {
     const currentUserEmail = (session.user as { email?: string })?.email;
     const currentUserRole = (session.user as { role?: string })?.role;
     
+    let revenueDebug = { fromTravelers: 0, fromAppLevel: 0, applicationsProcessed: 0 };
+    
     const totalRevenue = Array.isArray(applicationsData) ? applicationsData.reduce((sum: number, app: any) => {
       // If admin assignment is implemented, filter here:
       // if (currentUserRole !== 'SUPER_ADMIN' && app.assignedAdminEmail !== currentUserEmail) return sum;
       
+      revenueDebug.applicationsProcessed++;
+      
       // Calculate total payment from all travelers
       let appTotal = 0;
-      if (Array.isArray(app.travelersData)) {
-        appTotal = app.travelersData.reduce((tSum: number, traveler: any) => {
-          const fullPayment = Number(traveler?.fullPayment?.paymentAmount || 0);
-          const insurance = Number(traveler?.insurance?.paymentAmount || 0);
-          return tSum + fullPayment + insurance;
-        }, 0);
+      if (Array.isArray(app.travelersData) && app.travelersData.length > 0) {
+        app.travelersData.forEach((traveler: any) => {
+          // Only count completed payments
+          const fullPayment = traveler?.fullPayment?.paymentCompleted 
+            ? Number(traveler?.fullPayment?.paymentAmount || 0) 
+            : 0;
+          const insurance = traveler?.insurance?.insurancePaymentCompleted || traveler?.insurance?.paymentCompleted
+            ? Number(traveler?.insurance?.paymentAmount || 0)
+            : 0;
+          appTotal += fullPayment + insurance;
+        });
+        if (appTotal > 0) {
+          revenueDebug.fromTravelers += appTotal;
+        }
       }
-      // Fallback to application-level payment if no traveler data
+      
+      // Fallback to application-level payment if no traveler data or no traveler payments
       if (appTotal === 0) {
-        appTotal = Number(app.amountPaidTotal || app.amountPaid || 0);
+        const appLevelAmount = Number(app.amountPaidTotal || app.amountPaid || 0);
+        appTotal = appLevelAmount;
+        if (appLevelAmount > 0) {
+          revenueDebug.fromAppLevel += appLevelAmount;
+        }
       }
+      
       return sum + appTotal;
     }, 0) : 0;
+    
+    console.log('Total revenue calculated:', totalRevenue, 'Debug:', revenueDebug);
 
     // Calculate today's applications (ensure applicationsData is an array)
     const todayApplications = Array.isArray(applicationsData) ? applicationsData.filter((app: any) => {
@@ -116,14 +148,40 @@ export async function GET() {
     const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const thisMonthRevenue = Array.isArray(applicationsData) ? applicationsData.filter((app: any) => {
       const appDate = new Date(app.createdAt || app.created_at || new Date());
-      return appDate >= thisMonthStart && appDate < today;
+      return appDate >= thisMonthStart && appDate < endOfToday;
     }).reduce((sum: number, app: any) => {
-      return sum + (Number(app.amountPaid) || 0);
+      // Calculate from travelers if available
+      let monthAppTotal = 0;
+      if (Array.isArray(app.travelersData) && app.travelersData.length > 0) {
+        app.travelersData.forEach((traveler: any) => {
+          const fullPayment = traveler?.fullPayment?.paymentCompleted 
+            ? Number(traveler?.fullPayment?.paymentAmount || 0) 
+            : 0;
+          const insurance = traveler?.insurance?.insurancePaymentCompleted || traveler?.insurance?.paymentCompleted
+            ? Number(traveler?.insurance?.paymentAmount || 0)
+            : 0;
+          monthAppTotal += fullPayment + insurance;
+        });
+      }
+      // Fallback to app-level payment
+      if (monthAppTotal === 0) {
+        monthAppTotal = Number(app.amountPaidTotal || app.amountPaid || 0);
+      }
+      return sum + monthAppTotal;
     }, 0) : 0;
+    
+    console.log('This month revenue calculated:', thisMonthRevenue);
+
+    // Calculate total users - use actual fetched users count
+    const totalUsers = Array.isArray(usersData) && usersData.length > 0 
+      ? usersData.length 
+      : 0;
+    
+    console.log('Total users calculated:', totalUsers);
 
     const normalized: DashboardStats = {
       totalApplications,
-      totalUsers: Array.isArray(usersData) ? usersData.length : 0,
+      totalUsers,
       totalRevenue,
       pendingApplications,
       approvedApplications: completed,
