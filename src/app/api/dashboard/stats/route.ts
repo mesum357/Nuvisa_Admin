@@ -78,7 +78,7 @@ export async function GET() {
     const currentUserEmail = (session.user as { email?: string })?.email;
     const currentUserRole = (session.user as { role?: string })?.role;
     
-    let revenueDebug = { fromTravelers: 0, fromAppLevel: 0, applicationsProcessed: 0 };
+    const revenueDebug = { fromTravelers: 0, fromAppLevel: 0, applicationsProcessed: 0 };
     
     const totalRevenue = Array.isArray(applicationsData) ? applicationsData.reduce((sum: number, app: any) => {
       // If admin assignment is implemented, filter here:
