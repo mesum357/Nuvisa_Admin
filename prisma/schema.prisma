@@ -23,6 +23,8 @@ enum UserStatus {
 enum ApplicationStatus {
   PENDING
   UNDER_REVIEW
+  APPOINTMENT_BOOKED
+  AT_EMBASSY
   APPROVED
   REJECTED
   COMPLETED

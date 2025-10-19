@@ -84,6 +84,8 @@ export async function PATCH(
       const statusMap: Record<string, string> = {
         'PENDING': 'submitted',
         'UNDER_REVIEW': 'under_review',
+        'APPOINTMENT_BOOKED': 'appointment_booked',
+        'AT_EMBASSY': 'at_embassy',
         'APPROVED': 'approved',
         'REJECTED': 'rejected',
         'COMPLETED': 'completed'

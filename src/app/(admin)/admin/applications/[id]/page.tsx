@@ -29,7 +29,10 @@ export default function ApplicationDetailsPage() {
       const mapBackendStatus = (s?: string): ApplicationStatus => {
         const v = (s || '').toLowerCase();
         if (v === 'new' || v === 'draft') return 'PENDING' as ApplicationStatus;
-        if (v === 'submitted' || v === 'under_review' || v === 'processing') return 'UNDER_REVIEW' as ApplicationStatus;
+        if (v === 'submitted') return 'PENDING' as ApplicationStatus;
+        if (v === 'under_review' || v === 'processing') return 'UNDER_REVIEW' as ApplicationStatus;
+        if (v === 'appointment_booked') return 'APPOINTMENT_BOOKED' as ApplicationStatus;
+        if (v === 'at_embassy') return 'AT_EMBASSY' as ApplicationStatus;
         if (v === 'approved') return 'APPROVED' as ApplicationStatus;
         if (v === 'completed') return 'COMPLETED' as ApplicationStatus;
         if (v === 'rejected' || v === 'cancelled') return 'REJECTED' as ApplicationStatus;
@@ -795,11 +798,10 @@ export default function ApplicationDetailsPage() {
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value as ApplicationStatus)}
                 >
-                  {/* Map requested labels to internal statuses */}
                   <option value="PENDING">Submitted</option>
                   <option value="UNDER_REVIEW">Under Review</option>
-                  <option value="UNDER_REVIEW">Appointment Booked</option>
-                  <option value="UNDER_REVIEW">At Embassy</option>
+                  <option value="APPOINTMENT_BOOKED">Appointment Booked</option>
+                  <option value="AT_EMBASSY">At Embassy</option>
                   <option value="APPROVED">Approved</option>
                   <option value="REJECTED">Rejected</option>
                 </select>
