@@ -672,16 +672,70 @@ export default function ApplicationDetailsPage() {
                       <div className="mb-4">
                         <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Insurance Information</h5>
                         <div className="grid grid-cols-2 gap-3 text-sm">
-                          {Object.entries(traveler.insurance).map(([key, value]) => (
-                            <div key={key}>
-                              <span className="text-gray-500 dark:text-gray-400">{(key || '').replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span>
+                          {traveler.insurance.certificateUploaded !== undefined && (
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">Certificate Uploaded:</span>
                               <span className="ml-2 text-gray-900 dark:text-white">
-                                {typeof value === 'object' && value !== null 
-                                  ? JSON.stringify(value, null, 2) 
-                                  : String(value || '')}
+                                {traveler.insurance.certificateUploaded ? 'Yes' : 'No'}
                               </span>
                             </div>
-                          ))}
+                          )}
+                          {traveler.insurance.paymentAmount && (
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">Payment Amount:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white">${traveler.insurance.paymentAmount}</span>
+                            </div>
+                          )}
+                          {traveler.insurance.orderId && (
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">Order ID:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white">{traveler.insurance.orderId}</span>
+                            </div>
+                          )}
+                          {traveler.insurance.paymentCompleted !== undefined && (
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">Payment Completed:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white">
+                                {traveler.insurance.paymentCompleted ? 'Yes' : 'No'}
+                              </span>
+                            </div>
+                          )}
+                          {traveler.insurance.insuranceType && (
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">Insurance Type:</span>
+                              <span className="ml-2 text-gray-900 dark:text-white">{traveler.insurance.insuranceType}</span>
+                            </div>
+                          )}
+                          {traveler.insurance.file && (
+                            <div className="col-span-2">
+                              <span className="text-gray-500 dark:text-gray-400">Insurance Certificate:</span>
+                              <div className="mt-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-900 dark:text-white text-sm">
+                                    {traveler.insurance.file.name || 'Insurance Certificate'}
+                                  </span>
+                                  <a 
+                                    href={traveler.insurance.file.preview || traveler.insurance.file.data} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
+                                  >
+                                    View/Download
+                                  </a>
+                                </div>
+                                {traveler.insurance.file.size && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Size: {(traveler.insurance.file.size / 1024).toFixed(1)} KB
+                                  </div>
+                                )}
+                                {traveler.insurance.file.uploadedAt && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    Uploaded: {new Date(traveler.insurance.file.uploadedAt).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
