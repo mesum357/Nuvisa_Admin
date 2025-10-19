@@ -138,8 +138,17 @@ export async function PATCH(
         
         return NextResponse.json({ success: true, data: formattedData });
       }
-    } catch (backendError) {
+    } catch (backendError: any) {
       console.error('Backend update failed, trying Prisma fallback:', backendError);
+      // Return error response instead of falling back to Prisma
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Failed to update application status in backend',
+          details: backendError?.message || 'Unknown error'
+        }, 
+        { status: 500 }
+      );
     }
 
     // Fallback to Prisma DB if backend fails or application exists only in Prisma

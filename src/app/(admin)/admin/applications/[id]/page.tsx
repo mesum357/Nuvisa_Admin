@@ -133,17 +133,31 @@ export default function ApplicationDetailsPage() {
     if (!newStatus || newStatus === application?.status) return;
 
     setUpdating(true);
-    const response = await apiClient.patch(`/applications/${params.id}`, {
-      status: newStatus,
-      note: comment,
-      sendNotification,
-    });
+    try {
+      const response = await apiClient.patch(`/applications/${params.id}`, {
+        status: newStatus,
+        note: comment,
+        sendNotification,
+      });
 
-    if (response.success) {
-      await fetchApplication();
-      setComment('');
+      if (response.success) {
+        await fetchApplication();
+        setComment('');
+        // Show success message
+        console.log('Status updated successfully');
+        // You could add a toast notification here instead of console.log
+      } else {
+        console.error('Failed to update status:', response.error);
+        // Show error message to user
+        alert(`Failed to update status: ${response.error || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      console.error('Error updating status:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+      alert(`Error updating status: ${errorMessage}`);
+    } finally {
+      setUpdating(false);
     }
-    setUpdating(false);
   }, [newStatus, application?.status, params.id, comment, sendNotification, fetchApplication]);
 
   const handleAddComment = useCallback(async () => {
