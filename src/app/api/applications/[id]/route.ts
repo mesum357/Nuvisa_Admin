@@ -79,26 +79,21 @@ export async function PATCH(
     const data = await request.json();
     const { status, sendNotification, ...updateData } = data;
 
-    const currentApplication = await prisma.application.findUnique({
-      where: { id },
-      include: { user: true },
-    });
-
-    if (!currentApplication) {
-      // Fallback to backend update when not found in local Prisma DB
-      // Map frontend status to backend status format
-      const mapStatusToBackend = (frontendStatus: string) => {
-        const statusMap: Record<string, string> = {
-          'PENDING': 'submitted',
-          'UNDER_REVIEW': 'under_review',
-          'APPROVED': 'approved',
-          'REJECTED': 'rejected',
-          'COMPLETED': 'completed'
-        };
-        return statusMap[frontendStatus] || frontendStatus.toLowerCase();
+    // Map frontend status to backend status format
+    const mapStatusToBackend = (frontendStatus: string) => {
+      const statusMap: Record<string, string> = {
+        'PENDING': 'submitted',
+        'UNDER_REVIEW': 'under_review',
+        'APPROVED': 'approved',
+        'REJECTED': 'rejected',
+        'COMPLETED': 'completed'
       };
+      return statusMap[frontendStatus] || frontendStatus.toLowerCase();
+    };
 
-      const backendStatus = status ? mapStatusToBackend(status) : undefined;
+    // ALWAYS try to update the backend first (visa_applications table)
+    const backendStatus = status ? mapStatusToBackend(status) : undefined;
+    try {
       const be = await backendPatch(
         `/orders/application/${id}/status`, 
         { status: backendStatus, note: updateData.note, sendNotification }, 
@@ -109,8 +104,19 @@ export async function PATCH(
         // Return backend payload directly so details reflect exact record
         return NextResponse.json({ success: true, data: app });
       }
+    } catch (backendError) {
+      console.error('Backend update failed, trying Prisma fallback:', backendError);
+    }
+
+    // Fallback to Prisma DB if backend fails or application exists only in Prisma
+    const currentApplication = await prisma.application.findUnique({
+      where: { id },
+      include: { user: true },
+    });
+
+    if (!currentApplication) {
       return NextResponse.json(
-        { error: 'Application not found' },
+        { error: 'Application not found in both backend and Prisma DB' },
         { status: 404 }
       );
     }
