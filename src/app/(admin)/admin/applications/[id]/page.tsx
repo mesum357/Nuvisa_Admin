@@ -288,6 +288,90 @@ export default function ApplicationDetailsPage() {
             </div>
           </ComponentCard>
 
+          {/* Application-Level Insurance Information */}
+          {((application as any).insuranceDetails || (application as any).insurance) && (
+            <ComponentCard title="Application Insurance Information">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {(() => {
+                  // Parse the insurance JSON string if it exists
+                  let appInsurance = (application as any).insuranceDetails;
+                  if ((application as any).insurance && typeof (application as any).insurance === 'string') {
+                    try {
+                      appInsurance = { ...appInsurance, ...JSON.parse((application as any).insurance) };
+                    } catch (e) {
+                      console.error('Failed to parse insurance JSON:', e);
+                    }
+                  } else if ((application as any).insurance) {
+                    appInsurance = { ...appInsurance, ...(application as any).insurance };
+                  }
+                  
+                  return (
+                    <>
+                      {appInsurance?.paidInCheckout && (
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Paid in Checkout:</span>
+                          <span className="ml-2 text-gray-900 dark:text-white">
+                            {appInsurance.paidInCheckout.noOfInsurance} insurance(s) - ${appInsurance.paidInCheckout.paymentAmount}
+                          </span>
+                        </div>
+                      )}
+                      {appInsurance?.certificateCount !== undefined && (
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Certificate Count:</span>
+                          <span className="ml-2 text-gray-900 dark:text-white">{appInsurance.certificateCount}</span>
+                        </div>
+                      )}
+                      {appInsurance?.paymentAmount && (
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Payment Amount:</span>
+                          <span className="ml-2 text-gray-900 dark:text-white">${appInsurance.paymentAmount}</span>
+                        </div>
+                      )}
+                      {appInsurance?.orderId && (
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Order ID:</span>
+                          <span className="ml-2 text-gray-900 dark:text-white">{appInsurance.orderId}</span>
+                        </div>
+                      )}
+                      {appInsurance?.insurancePaymentCompleted !== undefined && (
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Payment Completed:</span>
+                          <span className="ml-2 text-gray-900 dark:text-white">
+                            {appInsurance.insurancePaymentCompleted ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                      )}
+                      {appInsurance?.certificate && Array.isArray(appInsurance.certificate) && appInsurance.certificate.length > 0 && (
+                        <div className="col-span-2">
+                          <span className="text-gray-500 dark:text-gray-400">Certificates:</span>
+                          <div className="mt-1 space-y-2">
+                            {appInsurance.certificate.map((cert: any, index: number) => (
+                              <div key={index} className="flex items-center gap-2">
+                                <span className="text-gray-900 dark:text-white text-sm">
+                                  Certificate {index + 1}
+                                </span>
+                                {cert.url && (
+                                  <a 
+                                    href={cert.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
+                                  >
+                                    View/Download
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </ComponentCard>
+          )}
+
           {/* Appointment Preferences */}
           {(application as any).appointment && (
             <ComponentCard title="Appointment Preferences">
@@ -668,74 +752,113 @@ export default function ApplicationDetailsPage() {
                     )}
 
                     {/* Insurance Information */}
-                    {traveler.insurance && (
+                    {(traveler.insurance || traveler.insuranceDetails) && (
                       <div className="mb-4">
                         <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Insurance Information</h5>
                         <div className="grid grid-cols-2 gap-3 text-sm">
-                          {traveler.insurance.certificateUploaded !== undefined && (
-                            <div>
-                              <span className="text-gray-500 dark:text-gray-400">Certificate Uploaded:</span>
-                              <span className="ml-2 text-gray-900 dark:text-white">
-                                {traveler.insurance.certificateUploaded ? 'Yes' : 'No'}
-                              </span>
-                            </div>
-                          )}
-                          {traveler.insurance.paymentAmount && (
-                            <div>
-                              <span className="text-gray-500 dark:text-gray-400">Payment Amount:</span>
-                              <span className="ml-2 text-gray-900 dark:text-white">${traveler.insurance.paymentAmount}</span>
-                            </div>
-                          )}
-                          {traveler.insurance.orderId && (
-                            <div>
-                              <span className="text-gray-500 dark:text-gray-400">Order ID:</span>
-                              <span className="ml-2 text-gray-900 dark:text-white">{traveler.insurance.orderId}</span>
-                            </div>
-                          )}
-                          {traveler.insurance.paymentCompleted !== undefined && (
-                            <div>
-                              <span className="text-gray-500 dark:text-gray-400">Payment Completed:</span>
-                              <span className="ml-2 text-gray-900 dark:text-white">
-                                {traveler.insurance.paymentCompleted ? 'Yes' : 'No'}
-                              </span>
-                            </div>
-                          )}
-                          {traveler.insurance.insuranceType && (
-                            <div>
-                              <span className="text-gray-500 dark:text-gray-400">Insurance Type:</span>
-                              <span className="ml-2 text-gray-900 dark:text-white">{traveler.insurance.insuranceType}</span>
-                            </div>
-                          )}
-                          {traveler.insurance.file && (
-                            <div className="col-span-2">
-                              <span className="text-gray-500 dark:text-gray-400">Insurance Certificate:</span>
-                              <div className="mt-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-gray-900 dark:text-white text-sm">
-                                    {traveler.insurance.file.name || 'Insurance Certificate'}
-                                  </span>
-                                  <a 
-                                    href={traveler.insurance.file.preview || traveler.insurance.file.data} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
-                                  >
-                                    View/Download
-                                  </a>
-                                </div>
-                                {traveler.insurance.file.size && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Size: {(traveler.insurance.file.size / 1024).toFixed(1)} KB
+                          {(() => {
+                            const insuranceData = traveler.insurance?.insuranceDetails;
+                            
+                            return (
+                              <>
+                                {insuranceData?.certificateUploaded !== undefined && (
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Certificate Uploaded:</span>
+                                    <span className="ml-2 text-gray-900 dark:text-white">
+                                      {insuranceData.certificateUploaded ? 'Yes' : 'No'}
+                                    </span>
                                   </div>
                                 )}
-                                {traveler.insurance.file.uploadedAt && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    Uploaded: {new Date(traveler.insurance.file.uploadedAt).toLocaleDateString()}
+                                {traveler.insurance?.insuranceCertificates && (
+                                  <div className="col-span-2">
+                                    <span className="text-gray-500 dark:text-gray-400">Insurance Certificate:</span>
+                                    <div className="mt-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-gray-900 dark:text-white text-sm">
+                                          Insurance Certificate
+                                        </span>
+                                        <a 
+                                          href={traveler.insurance.insuranceCertificates} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
+                                        >
+                                          View/Download
+                                        </a>
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
-                              </div>
-                            </div>
-                          )}
+                                {insuranceData?.file && (
+                                  <div className="col-span-2">
+                                    <span className="text-gray-500 dark:text-gray-400">Insurance Certificate Details:</span>
+                                    <div className="mt-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-gray-900 dark:text-white text-sm">
+                                          {insuranceData.file.name || 'Insurance Certificate'}
+                                        </span>
+                                        <a 
+                                          href={insuranceData.file.preview || insuranceData.file.data} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
+                                        >
+                                          View/Download
+                                        </a>
+                                      </div>
+                                      {insuranceData.file.size && (
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                          Size: {(insuranceData.file.size / 1024).toFixed(1)} KB
+                                        </div>
+                                      )}
+                                      {insuranceData.file.uploadedAt && (
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                          Uploaded: {new Date(insuranceData.file.uploadedAt).toLocaleDateString()}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                {traveler.insurance?.paymentAmount && (
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Payment Amount:</span>
+                                    <span className="ml-2 text-gray-900 dark:text-white">${traveler.insurance.paymentAmount}</span>
+                                  </div>
+                                )}
+                                {traveler.insurance?.orderId && (
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Order ID:</span>
+                                    <span className="ml-2 text-gray-900 dark:text-white">{traveler.insurance.orderId}</span>
+                                  </div>
+                                )}
+                                {traveler.insurance?.insurancePaymentCompleted !== undefined && (
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Payment Completed:</span>
+                                    <span className="ml-2 text-gray-900 dark:text-white">
+                                      {traveler.insurance.insurancePaymentCompleted ? 'Yes' : 'No'}
+                                    </span>
+                                  </div>
+                                )}
+                                {traveler.insurance?.insuranceType && (
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Insurance Type:</span>
+                                    <span className="ml-2 text-gray-900 dark:text-white">{traveler.insurance.insuranceType}</span>
+                                  </div>
+                                )}
+                                {traveler.insurance?.insurance && (
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Insurance Selected:</span>
+                                    <span className="ml-2 text-gray-900 dark:text-white">
+                                      {traveler.insurance.insurance === 'own' ? 'Own Insurance' : 
+                                       traveler.insurance.insurance === 'purchase' ? 'Purchase Insurance' :
+                                       traveler.insurance.insurance === 'true' ? 'Yes' : 
+                                       traveler.insurance.insurance}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     )}
