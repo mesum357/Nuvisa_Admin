@@ -36,9 +36,25 @@ export async function GET(
       try {
         const be = await backendGet(`/orders/application/${id}`);
         if (be.ok) {
-          const payload: unknown = be.data?.data || be.data || {};
-          // Return backend payload as-is so the client gets the exact data for the id
-          return NextResponse.json({ success: true, data: payload });
+          const payload: any = be.data?.data || be.data || {};
+          
+          // Ensure the backend data includes formatted application numbers
+          const formattedData = {
+            ...payload,
+            // Use formatted values if available, otherwise format them
+            applicationNo: payload.formattedApplicationId || payload.applicationNo || payload.code || payload.id?.slice(0, 8),
+            orderId: payload.formattedOrderId || payload.orderId,
+            // Ensure consistent field names
+            id: payload.id || payload.applicationId || id,
+            status: payload.applicationStatus || payload.status,
+            totalAmount: payload.totalAmount || payload.amountPaidTotal || payload.amountPaid || 0,
+            paidAmount: payload.paidAmount || payload.amountPaidTotal || payload.amountPaid || 0,
+            submittedAt: payload.submittedAt || payload.createdAt,
+            country: payload.country,
+            user: payload.user || { id: payload.email, name: payload.email, email: payload.email }
+          };
+          
+          return NextResponse.json({ success: true, data: formattedData });
         }
       } catch {}
 
@@ -102,9 +118,25 @@ export async function PATCH(
         (session.user as { email?: string })?.email
       );
       if (be.ok) {
-        const app: unknown = be.data?.data?.results || be.data?.data || be.data || {};
-        // Return backend payload directly so details reflect exact record
-        return NextResponse.json({ success: true, data: app });
+        const app: any = be.data?.data?.results || be.data?.data || be.data || {};
+        
+        // Ensure the updated data includes formatted application numbers
+        const formattedData = {
+          ...app,
+          // Use formatted values if available, otherwise format them
+          applicationNo: app.formattedApplicationId || app.applicationNo || app.code || app.id?.slice(0, 8),
+          orderId: app.formattedOrderId || app.orderId,
+          // Ensure consistent field names
+          id: app.id || app.applicationId || id,
+          status: app.applicationStatus || app.status,
+          totalAmount: app.totalAmount || app.amountPaidTotal || app.amountPaid || 0,
+          paidAmount: app.paidAmount || app.amountPaidTotal || app.amountPaid || 0,
+          submittedAt: app.submittedAt || app.createdAt,
+          country: app.country,
+          user: app.user || { id: app.email, name: app.email, email: app.email }
+        };
+        
+        return NextResponse.json({ success: true, data: formattedData });
       }
     } catch (backendError) {
       console.error('Backend update failed, trying Prisma fallback:', backendError);

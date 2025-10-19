@@ -54,7 +54,8 @@ export default function ApplicationDetailsPage() {
       // Normalize if backend payload is returned directly
       const normalized: Application = {
         id: d.id || d.applicationId || String(params.id),
-        applicationNo: d.orderId || d.applicationNo || d.code || d.id?.slice(0, 8) || String(params.id).slice(0, 8),
+        // Use formatted application number from backend, with fallback to formatting logic
+        applicationNo: d.formattedApplicationId || d.applicationNo || d.code || d.id?.slice(0, 8) || String(params.id).slice(0, 8),
         status: mapBackendStatus(d.status || d.applicationStatus),
         totalAmount: totalPaymentFromTravelers || Number(d.totalAmount ?? d.amountPaidTotal ?? d.amountPaid ?? 0),
         paidAmount: totalPaymentFromTravelers || Number(d.paidAmount ?? d.amountPaidTotal ?? d.amountPaid ?? 0),
