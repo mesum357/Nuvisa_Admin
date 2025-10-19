@@ -106,9 +106,53 @@ export async function GET(request: NextRequest) {
         totalPayment = Number(it.amountPaidTotal || it.amountPaid || 0);
       }
 
+      // Use the same formatting as frontend for consistency
+      const formatApplicationId = (rawId: any) => {
+        if (!rawId) return null;
+        const numericTail = (source: any, length: number) => {
+          if (!source) return "".padStart(length, "0");
+          let digits = String(source).replace(/\D+/g, "");
+          if (digits.length < length) {
+            const codes = Array.from(String(source))
+              .map((c) => c.charCodeAt(0))
+              .join("");
+            digits = (digits + codes).replace(/\D+/g, "");
+          }
+          if (!digits.length) {
+            digits = "0".repeat(length);
+          }
+          return digits.slice(-length).padStart(length, "0");
+        };
+        return `AI${numericTail(rawId, 8)}`;
+      };
+
+      const formatOrderId = (rawOrderId: any) => {
+        if (!rawOrderId) return null;
+        const numericTail = (source: any, length: number) => {
+          if (!source) return "".padStart(length, "0");
+          let digits = String(source).replace(/\D+/g, "");
+          if (digits.length < length) {
+            const codes = Array.from(String(source))
+              .map((c) => c.charCodeAt(0))
+              .join("");
+            digits = (digits + codes).replace(/\D+/g, "");
+          }
+          if (!digits.length) {
+            digits = "0".repeat(length);
+          }
+          return digits.slice(-length).padStart(length, "0");
+        };
+        return `ORD${numericTail(rawOrderId, 6)}`;
+      };
+
+      // Format application number using the same logic as frontend
+      const applicationNo = formatApplicationId(it.id);
+      const orderId = formatOrderId(it.orderId);
+
       return {
         id: it.id,
-        applicationNo: it.orderId || it.code || it.applicationNo || it.id?.slice(0, 8),
+        applicationNo: applicationNo,
+        orderId: orderId,
         status: typeof it.applicationStatus === 'string' ? it.applicationStatus : 'UNKNOWN',
         totalAmount: totalPayment,
         paidAmount: totalPayment,
