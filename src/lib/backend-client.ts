@@ -66,7 +66,34 @@ export const backendGet = async (path: string, params?: Record<string, any>, req
   // Use admin proxy headers instead of trying to get JWT token
   // This bypasses the need for user authentication since we're the admin panel
   const headers = getBackendHeaders();
-  const res = await fetch(url.toString(), { cache: 'no-store', headers });
+  const res = await fetch(url.toString(), { 
+    cache: 'no-store', 
+    headers,
+    mode: 'cors',
+    credentials: 'include'
+  });
+  let data: any = null;
+  try {
+    const text = await res.text();
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, status: res.status, data };
+};
+
+export const backendPost = async (path: string, body?: any, requesterEmail?: string) => {
+  const url = getBackendUrl(path);
+  // Use admin proxy headers instead of trying to get JWT token
+  const headers = getBackendHeaders();
+  const res = await fetch(url, { 
+    method: 'POST', 
+    headers, 
+    cache: 'no-store', 
+    body: body ? JSON.stringify(body) : undefined,
+    mode: 'cors',
+    credentials: 'include'
+  });
   let data: any = null;
   try {
     const text = await res.text();
@@ -81,7 +108,14 @@ export const backendPatch = async (path: string, body?: any, requesterEmail?: st
   const url = getBackendUrl(path);
   // Use admin proxy headers instead of trying to get JWT token
   const headers = getBackendHeaders();
-  const res = await fetch(url, { method: 'PATCH', headers, cache: 'no-store', body: body ? JSON.stringify(body) : undefined });
+  const res = await fetch(url, { 
+    method: 'PATCH', 
+    headers, 
+    cache: 'no-store', 
+    body: body ? JSON.stringify(body) : undefined,
+    mode: 'cors',
+    credentials: 'include'
+  });
   let data: any = null;
   try {
     const text = await res.text();

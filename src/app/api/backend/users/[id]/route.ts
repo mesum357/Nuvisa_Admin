@@ -107,6 +107,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { id } = await params;
     const body = await request.json();
 
+    // Prevent accidentally updating admin users
+    if ((session.user as any)?.id === id) {
+      return NextResponse.json({ error: 'Cannot update your own admin account through user API' }, { status: 400 });
+    }
+
+    console.log('User update request:', { 
+      adminId: (session.user as any)?.id, 
+      targetUserId: id, 
+      updateData: body,
+      adminRole: (session.user as any)?.role 
+    });
+
     // Backend expects PATCH to /orders/users/:id; reuse backendGet with fetch for PATCH
     const tokenRes = await fetch(getBackendUrl(BACKEND_CONFIG.ENDPOINTS.AUTH.GENERATE_TOKEN), { 
       method: 'POST', 

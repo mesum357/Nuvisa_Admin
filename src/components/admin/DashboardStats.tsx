@@ -1,13 +1,17 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { DashboardStats as IDashboardStats } from '@/types';
 import { ArrowUpIcon, ArrowDownIcon, GroupIcon, BoxIconLine } from '@/icons';
 import Badge from '../ui/badge/Badge';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, canViewAmounts } from '@/lib/utils';
+import { useSession } from 'next-auth/react';
 
 export default function DashboardStats() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [stats, setStats] = useState<IDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,12 +32,24 @@ export default function DashboardStats() {
     fetchStats();
   }, [fetchStats]);
 
-  // No auto-refresh; fetch once on mount
+  const handleMetricClick = (metric: 'applications' | 'users' | 'revenue' | 'pending' | 'submitted') => {
+    router.push(`/admin/analytics/${metric}`);
+  };
 
   const metrics = useMemo(() => {
     if (!stats) return [];
     
-    return [
+    const items: Array<{
+      title: string;
+      value: string;
+      icon: React.ReactNode;
+      change?: number;
+      changeLabel?: string;
+      subValue?: string;
+      positive: boolean;
+      metric: 'applications' | 'users' | 'revenue' | 'pending' | 'submitted';
+      clickable: boolean;
+    }> = [
       {
         title: 'Total Applications',
         value: stats.totalApplications.toLocaleString(),
@@ -41,6 +57,8 @@ export default function DashboardStats() {
         change: stats.newApplicationsToday,
         changeLabel: 'today',
         positive: true,
+        metric: 'applications' as const,
+        clickable: true,
       },
       {
         title: 'Total Users',
@@ -49,23 +67,43 @@ export default function DashboardStats() {
         change: stats.newUsersToday,
         changeLabel: 'today',
         positive: true,
+        metric: 'users' as const,
+        clickable: true,
       },
       {
+        title: 'Draft Applications',
+        value: stats.pendingApplications.toLocaleString(),
+        icon: <BoxIconLine className="text-gray-800 dark:text-white/90" />,
+        subValue: 'Not yet submitted by users',
+        positive: false,
+        metric: 'pending' as const,
+        clickable: true,
+      },
+      {
+        title: 'Submitted Applications',
+        value: stats.submittedApplications.toLocaleString(),
+        icon: <BoxIconLine className="text-gray-800 dark:text-white/90" />,
+        subValue: `${stats.approvedApplications.toLocaleString()} approved, ${stats.rejectedApplications.toLocaleString()} rejected`,
+        positive: true,
+        metric: 'submitted' as const,
+        clickable: true,
+      },
+    ];
+
+    if (canViewAmounts(session?.user)) {
+      items.splice(2, 0, {
         title: 'Total Revenue',
         value: formatCurrency(stats.totalRevenue),
         icon: <BoxIconLine className="text-gray-800 dark:text-white/90" />,
-        change: formatCurrency(stats.revenueThisMonth),
+        change: stats.revenueThisMonth,
         changeLabel: 'this month',
         positive: true,
-      },
-      {
-        title: 'Pending Applications',
-        value: stats.pendingApplications.toLocaleString(),
-        icon: <BoxIconLine className="text-gray-800 dark:text-white/90" />,
-        subValue: `${stats.approvedApplications.toLocaleString()} approved, ${stats.rejectedApplications.toLocaleString()} rejected`,
-        positive: false,
-      },
-    ];
+        metric: 'revenue' as const,
+        clickable: true,
+      });
+    }
+
+    return items;
   }, [stats]);
 
   if (loading) {
@@ -90,7 +128,10 @@ export default function DashboardStats() {
       {metrics.map((metric, index) => (
         <div
           key={index}
-          className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6"
+          className={`rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6 group ${
+            metric.clickable ? 'cursor-pointer hover:shadow-lg transition-shadow duration-200 hover:border-blue-300 dark:hover:border-blue-600' : ''
+          }`}
+          onClick={() => metric.clickable && handleMetricClick(metric.metric)}
         >
           <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
             {metric.icon}
@@ -124,6 +165,12 @@ export default function DashboardStats() {
               </div>
             )}
           </div>
+          
+          {metric.clickable && (
+            <div className="mt-3 text-xs text-blue-600 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+              Click to view historical data
+            </div>
+          )}
         </div>
       ))}
     </div>

@@ -14,8 +14,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const target = await prisma.admin.findUnique({ where: { id } });
     if (!target) return NextResponse.json({ error: 'Admin not found' }, { status: 404 });
-    if (target.role === 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Cannot modify SUPER_ADMIN' }, { status: 400 });
+    
+    // Prevent disabling SUPER_ADMIN accounts
+    if (target.role === 'SUPER_ADMIN' && isActive === false) {
+      return NextResponse.json({ error: 'Cannot disable SUPER_ADMIN account' }, { status: 400 });
+    }
+    
+    // Prevent modifying SUPER_ADMIN role assignments
+    if (target.role === 'SUPER_ADMIN' && roleId !== undefined) {
+      return NextResponse.json({ error: 'Cannot modify SUPER_ADMIN role' }, { status: 400 });
     }
 
     if (roleId) {

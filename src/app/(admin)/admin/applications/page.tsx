@@ -3,14 +3,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { Application, PaginatedResponse } from '@/types';
-import { formatDate, formatCurrency, getStatusColor, downloadCSV } from '@/lib/utils';
+import { formatDate, formatCurrency, getStatusColor, downloadCSV, canViewAmounts } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
 import Link from 'next/link';
 import Button from '@/components/ui/button/Button';
 import { Suspense } from 'react';
 import Pagination from '@/components/ui/Pagination';
+import { useSession } from 'next-auth/react';
 
 function ApplicationsContent() {
+  const { data: session } = useSession();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
@@ -22,6 +24,9 @@ function ApplicationsContent() {
   const [filters, setFilters] = useState({
     search: '',
     country: '',
+    status: '',
+    dateFrom: '',
+    dateTo: '',
     sortBy: 'submittedAt',
     sortOrder: 'desc' as 'asc' | 'desc',
   });
@@ -38,6 +43,9 @@ function ApplicationsContent() {
     };
     if (debouncedSearch) params.search = debouncedSearch;
     if (filters.country) params.country = filters.country;
+    if (filters.status) params.status = filters.status;
+    if (filters.dateFrom) params.dateFrom = filters.dateFrom;
+    if (filters.dateTo) params.dateTo = filters.dateTo;
 
     const response = await apiClient.get<PaginatedResponse<Application>>('/backend/applications', params);
     if (response.success && response.data) {
@@ -52,20 +60,38 @@ function ApplicationsContent() {
       }
     }
     setLoading(false);
-  }, [pagination.page, pagination.limit, debouncedSearch, filters.country, filters.sortBy, filters.sortOrder]);
+  }, [pagination.page, pagination.limit, debouncedSearch, filters.country, filters.status, filters.dateFrom, filters.dateTo, filters.sortBy, filters.sortOrder]);
 
   useEffect(() => {
     fetchApplications();
   }, [fetchApplications]);
 
+  const [isExporting, setIsExporting] = useState(false);
+
   const handleExport = useCallback(async () => {
-    const response = await apiClient.get<any[]>('/export/applications', {
-      search: debouncedSearch,
-    });
-    if (response.success && response.data) {
-      downloadCSV(response.data, `applications-${Date.now()}`);
+    try {
+      setIsExporting(true);
+      const response = await apiClient.get<any[]>('/export/applications', {
+        search: debouncedSearch,
+        status: filters.status,
+        startDate: filters.dateFrom,
+        endDate: filters.dateTo,
+      });
+      
+      if (response.success && response.data) {
+        downloadCSV(response.data, `applications-${Date.now()}`);
+      } else {
+        console.error('Export failed:', response.error);
+        // You could add a toast notification here
+        alert('Export failed: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Export failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsExporting(false);
     }
-  }, [debouncedSearch]);
+  }, [debouncedSearch, filters.status, filters.dateFrom, filters.dateTo]);
 
   const handleSearch = useCallback((value: string) => {
     setFilters((prev) => ({ ...prev, search: value }));
@@ -85,31 +111,70 @@ function ApplicationsContent() {
             Manage all application submissions
           </p>
         </div>
-        <Button onClick={handleExport} variant="outline">
-          Export CSV
+        <Button onClick={handleExport} variant="outline" disabled={isExporting}>
+          {isExporting ? 'Exporting...' : 'Export CSV'}
         </Button>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <input
               type="text"
-              placeholder="Search applications..."
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              placeholder="Search by application number, user name, email..."
+              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
               value={filters.search}
               onChange={(e) => handleSearch(e.target.value)}
             />
             <input
               type="text"
               placeholder="Filter by country..."
-              className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
               value={filters.country}
               onChange={(e) => {
                 setFilters((prev) => ({ ...prev, country: e.target.value }));
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
             />
+            <select
+              className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              value={filters.status}
+              onChange={(e) => {
+                setFilters((prev) => ({ ...prev, status: e.target.value }));
+                setPagination((prev) => ({ ...prev, page: 1 }));
+              }}
+            >
+              <option value="">All Statuses</option>
+              <option value="PENDING">Draft (Not Submitted)</option>
+              <option value="SUBMITTED">Submitted</option>
+              <option value="UNDER_REVIEW">Under Review</option>
+              <option value="APPOINTMENT_BOOKED">Appointment Booked</option>
+              <option value="AT_EMBASSY">At Embassy</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+            <div className="flex gap-2">
+              <input
+                type="date"
+                placeholder="From Date"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+                value={filters.dateFrom}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, dateFrom: e.target.value }));
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+              />
+              <input
+                type="date"
+                placeholder="To Date"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+                value={filters.dateTo}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, dateTo: e.target.value }));
+                  setPagination((prev) => ({ ...prev, page: 1 }));
+                }}
+              />
+            </div>
           </div>
         </div>
 
@@ -129,9 +194,11 @@ function ApplicationsContent() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Amount
-                </th>
+                {canViewAmounts(session?.user) && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Amount
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Submitted
                 </th>
@@ -143,13 +210,13 @@ function ApplicationsContent() {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center">
+                  <td colSpan={canViewAmounts(session?.user) ? 7 : 6} className="px-6 py-4 text-center">
                     <div className="animate-pulse">Loading...</div>
                   </td>
                 </tr>
               ) : applications.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={canViewAmounts(session?.user) ? 7 : 6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     No applications found
                   </td>
                 </tr>
@@ -179,9 +246,11 @@ function ApplicationsContent() {
                         {(app.status || '').replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {formatCurrency(app.totalAmount)}
-                    </td>
+                    {canViewAmounts(session?.user) && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {formatCurrency(app.totalAmount)}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {formatDate(app.submittedAt)}
                     </td>

@@ -46,10 +46,26 @@ function UsersContent() {
   }, [fetchUsers]);
 
 
+  const [isExporting, setIsExporting] = useState(false);
+
   const handleExport = useCallback(async () => {
-    const response = await apiClient.get<any[]>('/export/users', { search: debouncedSearch });
-    if (response.success && response.data) {
-      downloadCSV(response.data, `users-${Date.now()}`);
+    try {
+      setIsExporting(true);
+      const response = await apiClient.get<any[]>('/export/users', { 
+        search: debouncedSearch,
+      });
+      
+      if (response.success && response.data) {
+        downloadCSV(response.data, `users-${Date.now()}`);
+      } else {
+        console.error('Export failed:', response.error);
+        alert('Export failed: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Export failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsExporting(false);
     }
   }, [debouncedSearch]);
 
@@ -59,23 +75,43 @@ function UsersContent() {
   }, []);
 
   const handleUpdateUserStatus = useCallback(async (userId: string, newStatus: UserStatus) => {
-    const response = await apiClient.patch(`/backend/users/${userId}`, {
-      status: newStatus,
-    });
+    try {
+      console.log('Updating user status:', { userId, newStatus });
+      const response = await apiClient.patch(`/backend/users/${userId}`, {
+        status: newStatus,
+      });
 
-    if (response.success) {
-      fetchUsers();
+      if (response.success) {
+        console.log('User status updated successfully');
+        fetchUsers();
+      } else {
+        console.error('Failed to update user status:', response.error);
+        alert('Failed to update user status: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      alert('Error updating user status: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }, [fetchUsers]);
 
   const handleVerifyUser = useCallback(async (userId: string) => {
-    const response = await apiClient.patch(`/backend/users/${userId}`, {
-      isVerified: true,
-      status: 'ACTIVE',
-    });
+    try {
+      console.log('Verifying user:', { userId });
+      const response = await apiClient.patch(`/backend/users/${userId}`, {
+        isVerified: true,
+        status: 'ACTIVE',
+      });
 
-    if (response.success) {
-      fetchUsers();
+      if (response.success) {
+        console.log('User verified successfully');
+        fetchUsers();
+      } else {
+        console.error('Failed to verify user:', response.error);
+        alert('Failed to verify user: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error verifying user:', error);
+      alert('Error verifying user: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }, [fetchUsers]);
 
@@ -90,8 +126,8 @@ function UsersContent() {
             Manage all user accounts
           </p>
         </div>
-        <Button onClick={handleExport} variant="outline">
-          Export CSV
+        <Button onClick={handleExport} variant="outline" disabled={isExporting}>
+          {isExporting ? 'Exporting...' : 'Export CSV'}
         </Button>
       </div>
 

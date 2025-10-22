@@ -4,20 +4,25 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { Application, ApplicationStatus } from '@/types';
-import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils';
+import { formatDate, formatCurrency, getStatusColor, canViewAmounts, downloadFileWithFallback } from '@/lib/utils';
 import Button from '@/components/ui/button/Button';
 import ComponentCard from '@/components/common/ComponentCard';
 import { ArrowLeft } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 export default function ApplicationDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const [application, setApplication] = useState<Application | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [newStatus, setNewStatus] = useState<ApplicationStatus | ''>('');
   const [comment, setComment] = useState('');
   const [sendNotification, setSendNotification] = useState(true);
+  const [comments, setComments] = useState<any[]>([]);
+  const [isInternalComment, setIsInternalComment] = useState(true);
+  const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
 
   const fetchApplication = useCallback(async () => {
     setLoading(true);
@@ -29,7 +34,7 @@ export default function ApplicationDetailsPage() {
       const mapBackendStatus = (s?: string): ApplicationStatus => {
         const v = (s || '').toLowerCase();
         if (v === 'new' || v === 'draft') return 'PENDING' as ApplicationStatus;
-        if (v === 'submitted') return 'PENDING' as ApplicationStatus;
+        if (v === 'submitted') return 'SUBMITTED' as ApplicationStatus; // Fixed: Use SUBMITTED instead of PENDING
         if (v === 'under_review' || v === 'processing') return 'UNDER_REVIEW' as ApplicationStatus;
         if (v === 'appointment_booked') return 'APPOINTMENT_BOOKED' as ApplicationStatus;
         if (v === 'at_embassy') return 'AT_EMBASSY' as ApplicationStatus;
@@ -125,9 +130,21 @@ export default function ApplicationDetailsPage() {
     setLoading(false);
   }, [params.id]);
 
+  const fetchComments = useCallback(async () => {
+    try {
+      const response = await apiClient.get(`/applications/${params.id}/comments`);
+      if (response.success && response.data) {
+        setComments((response.data as any).comments || []);
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  }, [params.id]);
+
   useEffect(() => {
     fetchApplication();
-  }, [fetchApplication]);
+    fetchComments();
+  }, [fetchApplication, fetchComments]);
 
   const handleStatusUpdate = useCallback(async () => {
     if (!newStatus || newStatus === application?.status) return;
@@ -165,14 +182,39 @@ export default function ApplicationDetailsPage() {
 
     const response = await apiClient.post(`/applications/${params.id}/comments`, {
       comment,
-      isInternal: true,
+      isInternal: isInternalComment,
     });
 
     if (response.success) {
-      await fetchApplication();
+      await fetchComments();
       setComment('');
     }
-  }, [comment, params.id, fetchApplication]);
+  }, [comment, params.id, fetchComments, isInternalComment]);
+
+  const handleDocumentDownload = useCallback(async (doc: any) => {
+    try {
+      if (!doc.fileUrl) {
+        console.error('No file URL available for document:', doc);
+        alert('File URL not available');
+        return;
+      }
+
+      const fileName = doc.fileName || `document-${doc.documentType}`;
+      const docId = doc.id || `${doc.travelerId}-${doc.documentType}`;
+      
+      setDownloadingDoc(docId);
+      
+      // Use the improved download function with fallback
+      await downloadFileWithFallback(doc.fileUrl, fileName);
+      
+      console.log('Download initiated for:', fileName);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      alert('Failed to download document. Please try again.');
+    } finally {
+      setDownloadingDoc(null);
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -226,18 +268,22 @@ export default function ApplicationDetailsPage() {
                   {(application.status || '').replace('_', ' ')}
                 </span>
               </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Amount</p>
-                <p className="text-base font-medium text-gray-900 dark:text-white mt-1">
-                  {formatCurrency(application.totalAmount)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Paid Amount</p>
-                <p className="text-base font-medium text-gray-900 dark:text-white mt-1">
-                  {formatCurrency(application.paidAmount)}
-                </p>
-              </div>
+              {canViewAmounts(session?.user) && (
+                <>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Amount</p>
+                    <p className="text-base font-medium text-gray-900 dark:text-white mt-1">
+                      {formatCurrency(application.totalAmount)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Paid Amount</p>
+                    <p className="text-base font-medium text-gray-900 dark:text-white mt-1">
+                      {formatCurrency(application.paidAmount)}
+                    </p>
+                  </div>
+                </>
+              )}
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Submitted At</p>
                 <p className="text-base font-medium text-gray-900 dark:text-white mt-1">
@@ -254,9 +300,17 @@ export default function ApplicationDetailsPage() {
               )}
               {(application as any).visaTypeId && (
                 <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Visa Type ID</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Visa Type ID
+                    <span className="ml-1 text-xs text-gray-400" title="Internal identifier for the visa type selected by the user">
+                      (?)
+                    </span>
+                  </p>
                   <p className="text-base font-medium text-gray-900 dark:text-white mt-1">
                     {(application as any).visaTypeId}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Internal identifier for the visa type selected by the user
                   </p>
                 </div>
               )}
@@ -366,14 +420,27 @@ export default function ApplicationDetailsPage() {
                                   Certificate {index + 1}
                                 </span>
                                 {cert.url && (
-                                  <a 
-                                    href={cert.url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
-                                  >
-                                    View/Download
-                                  </a>
+                                  <div className="flex gap-2">
+                                    <a 
+                                      href={cert.url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
+                                    >
+                                      View
+                                    </a>
+                                    <button
+                                      onClick={() => handleDocumentDownload({ 
+                                        fileUrl: cert.url, 
+                                        fileName: `certificate-${index + 1}`,
+                                        id: `cert-${index}`
+                                      })}
+                                      disabled={downloadingDoc === `cert-${index}`}
+                                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {downloadingDoc === `cert-${index}` ? 'Downloading...' : 'Download'}
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             ))}
@@ -792,14 +859,27 @@ export default function ApplicationDetailsPage() {
                                         <span className="text-gray-900 dark:text-white text-sm">
                                           Insurance Certificate
                                         </span>
-                                        <a 
-                                          href={traveler.insurance.insuranceCertificates} 
-                                          target="_blank" 
-                                          rel="noopener noreferrer"
-                                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
-                                        >
-                                          View/Download
-                                        </a>
+                                        <div className="flex gap-2">
+                                          <a 
+                                            href={traveler.insurance.insuranceCertificates} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
+                                          >
+                                            View
+                                          </a>
+                                          <button
+                                            onClick={() => handleDocumentDownload({ 
+                                              fileUrl: traveler.insurance.insuranceCertificates, 
+                                              fileName: 'insurance-certificate',
+                                              id: `insurance-cert-${traveler.id}`
+                                            })}
+                                            disabled={downloadingDoc === `insurance-cert-${traveler.id}`}
+                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                          >
+                                            {downloadingDoc === `insurance-cert-${traveler.id}` ? 'Downloading...' : 'Download'}
+                                          </button>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -812,14 +892,27 @@ export default function ApplicationDetailsPage() {
                                         <span className="text-gray-900 dark:text-white text-sm">
                                           {insuranceData.file.name || 'Insurance Certificate'}
                                         </span>
-                                        <a 
-                                          href={insuranceData.file.preview || insuranceData.file.data} 
-                                          target="_blank" 
-                                          rel="noopener noreferrer"
-                                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
-                                        >
-                                          View/Download
-                                        </a>
+                                        <div className="flex gap-2">
+                                          <a 
+                                            href={insuranceData.file.preview || insuranceData.file.data} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
+                                          >
+                                            View
+                                          </a>
+                                          <button
+                                            onClick={() => handleDocumentDownload({ 
+                                              fileUrl: insuranceData.file.preview || insuranceData.file.data, 
+                                              fileName: insuranceData.file.name || 'insurance-file',
+                                              id: `insurance-file-${traveler.id}`
+                                            })}
+                                            disabled={downloadingDoc === `insurance-file-${traveler.id}`}
+                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                          >
+                                            {downloadingDoc === `insurance-file-${traveler.id}` ? 'Downloading...' : 'Download'}
+                                          </button>
+                                        </div>
                                       </div>
                                       {insuranceData.file.size && (
                                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -930,10 +1023,8 @@ export default function ApplicationDetailsPage() {
                                 </p>
                               </div>
                               <div className="flex items-center gap-3">
-                                {doc.isVerified ? (
+                                {doc.isVerified && (
                                   <span className="text-xs text-green-600 dark:text-green-400">Verified</span>
-                                ) : (
-                                  <span className="text-xs text-yellow-600 dark:text-yellow-400">Pending</span>
                                 )}
                                 <a
                                   href={doc.fileUrl}
@@ -943,13 +1034,13 @@ export default function ApplicationDetailsPage() {
                                 >
                                   View
                                 </a>
-                                <a
-                                  href={doc.fileUrl}
-                                  download
-                                  className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300"
+                                <button
+                                  onClick={() => handleDocumentDownload(doc)}
+                                  disabled={downloadingDoc === (doc.id || `${doc.travelerId}-${doc.documentType}`)}
+                                  className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  Download
-                                </a>
+                                  {downloadingDoc === (doc.id || `${doc.travelerId}-${doc.documentType}`) ? 'Downloading...' : 'Download'}
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -962,14 +1053,19 @@ export default function ApplicationDetailsPage() {
             )}
           </ComponentCard>
 
-          {application.comments && application.comments.length > 0 && (
+          {comments && comments.length > 0 && (
             <ComponentCard title="Comments & Notes">
               <div className="space-y-4">
-                {application.comments.map((comment) => (
-                  <div key={comment.id} className="border-l-4 border-brand-500 pl-4 py-2">
-                    <p className="text-sm text-gray-900 dark:text-white">{comment.comment}</p>
+                {comments.map((comment) => (
+                  <div key={comment.id} className={`border-l-4 pl-4 py-2 ${comment.isInternal ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-green-500 bg-green-50 dark:bg-green-900/20'}`}>
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm text-gray-900 dark:text-white">{comment.comment}</p>
+                      <span className={`text-xs px-2 py-1 rounded-full ${comment.isInternal ? 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100' : 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'}`}>
+                        {comment.isInternal ? 'Internal' : 'User'}
+                      </span>
+                    </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {formatDate(comment.createdAt, 'datetime')}
+                      {formatDate(comment.createdAt, 'datetime')} by {comment.adminEmail || 'Admin'}
                     </p>
                   </div>
                 ))}
@@ -990,7 +1086,8 @@ export default function ApplicationDetailsPage() {
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value as ApplicationStatus)}
                 >
-                  <option value="PENDING">Submitted</option>
+                  <option value="PENDING">Pending (New/Draft)</option>
+                  <option value="SUBMITTED">Submitted</option>
                   <option value="UNDER_REVIEW">Under Review</option>
                   <option value="APPOINTMENT_BOOKED">Appointment Booked</option>
                   <option value="AT_EMBASSY">At Embassy</option>
@@ -1037,12 +1134,24 @@ export default function ApplicationDetailsPage() {
 
           <ComponentCard title="Add Comment">
             <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isInternalComment"
+                  checked={isInternalComment}
+                  onChange={(e) => setIsInternalComment(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <label htmlFor="isInternalComment" className="text-sm text-gray-700 dark:text-gray-300">
+                  Internal comment (not visible to user)
+                </label>
+              </div>
               <textarea
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 rows={4}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Add an internal note..."
+                placeholder={isInternalComment ? "Add an internal note..." : "Add a note for the user..."}
               />
               <Button onClick={handleAddComment} className="w-full" variant="outline">
                 Add Comment

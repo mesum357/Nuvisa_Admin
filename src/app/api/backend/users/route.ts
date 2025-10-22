@@ -3,6 +3,47 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { backendGet } from '@/lib/backend-client';
 
+// Utility function to process user names from various backend field formats
+function processUserName(user: any): string {
+  // Try different combinations of name fields
+  const firstName = user.first_name || user.firstName || user.given_name || '';
+  const lastName = user.last_name || user.lastName || user.family_name || '';
+  const fullName = user.full_name || user.fullName || user.name || '';
+  const userName = user.user_name || user.userName || '';
+  
+  // Debug logging to see what fields are available
+  console.log('Processing user name for:', user.email, 'Available fields:', {
+    first_name: user.first_name,
+    firstName: user.firstName,
+    given_name: user.given_name,
+    last_name: user.last_name,
+    lastName: user.lastName,
+    family_name: user.family_name,
+    full_name: user.full_name,
+    fullName: user.fullName,
+    name: user.name,
+    user_name: user.user_name,
+    userName: user.userName
+  });
+  
+  // Priority order: first+last name, full name, user name, email
+  if (firstName || lastName) {
+    const result = [firstName, lastName].filter(Boolean).join(' ').trim();
+    console.log('Using first+last name:', result);
+    return result;
+  }
+  if (fullName) {
+    console.log('Using full name:', fullName.trim());
+    return fullName.trim();
+  }
+  if (userName) {
+    console.log('Using user name:', userName.trim());
+    return userName.trim();
+  }
+  console.log('Using email as fallback:', user.email);
+  return user.email || 'Unknown User';
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -46,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     const users = rows.map((u: any) => ({
       id: u.id,
-      name: [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.user_name || u.email,
+      name: processUserName(u),
       email: u.email,
       phone: u.phone_no || '',
       status: u.status || 'ACTIVE',

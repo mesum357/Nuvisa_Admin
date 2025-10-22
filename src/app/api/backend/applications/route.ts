@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { backendGet } from '@/lib/backend-client';
+import { canViewAmounts } from '@/lib/utils';
 
 // Proxy to Nest backend: GET /api/backend/applications
 export async function GET(request: NextRequest) {
@@ -15,6 +16,8 @@ export async function GET(request: NextRequest) {
     const status = sp.get('status') || '';
     const search = sp.get('search') || '';
     const country = sp.get('country') || '';
+    const dateFrom = sp.get('dateFrom') || '';
+    const dateTo = sp.get('dateTo') || '';
 
     // Adjust to your backend endpoint and query params
     // Use the backend search endpoint to retrieve a list
@@ -22,7 +25,8 @@ export async function GET(request: NextRequest) {
     const mapStatus = (s?: string) => {
       if (!s) return undefined;
       const v = s.toUpperCase();
-      if (v === 'PENDING') return 'new';
+      if (v === 'PENDING') return 'new'; // Only draft/new/pending, NOT submitted
+      if (v === 'SUBMITTED') return 'submitted'; // Separate submitted status
       if (v === 'UNDER_REVIEW') return 'under_review';
       if (v === 'APPROVED') return 'approved';
       if (v === 'REJECTED') return 'rejected';
@@ -36,6 +40,8 @@ export async function GET(request: NextRequest) {
       status: mapStatus(status) || undefined,
       q: search || undefined,
       country: country || undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
     };
 
     // Remove undefined values
@@ -61,19 +67,22 @@ export async function GET(request: NextRequest) {
 
     const list = Array.isArray(items) ? items : [];
 
-    // Enforce filter locally to cover backend mismatches
-    const normalizeBackendStatus = (s?: string) => (s || '')
-      .toString()
-      .toLowerCase()
-      .replace(/[^a-z]+/g, ''); // collapse to alpha only so 'under_review'|'Under Review' -> 'underreview'
+    // Comprehensive status normalization and filtering
+    const normalizeBackendStatus = (s?: string) => {
+      if (!s) return '';
+      const normalized = s.toString().toLowerCase().replace(/[^a-z]+/g, '');
+      return normalized;
+    };
 
     const desired = (status || '').toUpperCase();
     const desiredSet = new Set<string>((() => {
       switch (desired) {
         case 'PENDING':
-          return ['new', 'draft', 'pending'];
+          return ['new', 'draft', 'pending']; // Only draft/new/pending, NOT submitted
+        case 'SUBMITTED':
+          return ['submitted']; // Separate submitted status
         case 'UNDER_REVIEW':
-          return ['underreview', 'submitted', 'processing'];
+          return ['underreview', 'processing', 'appointmentbooked', 'atembassy'];
         case 'APPROVED':
           return ['approved'];
         case 'REJECTED':
@@ -154,8 +163,8 @@ export async function GET(request: NextRequest) {
         applicationNo: applicationNo,
         orderId: orderId,
         status: typeof it.applicationStatus === 'string' ? it.applicationStatus : 'UNKNOWN',
-        totalAmount: totalPayment,
-        paidAmount: totalPayment,
+        totalAmount: canViewAmounts(session.user) ? totalPayment : 0,
+        paidAmount: canViewAmounts(session.user) ? totalPayment : 0,
         submittedAt: it.createdAt,
         country: it.country || '-',
         user: {

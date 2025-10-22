@@ -55,17 +55,32 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
       // Refresh permissions on subsequent requests so role assignment applies after reload
+      // Only refresh if we don't already have a role or if it's been more than 5 minutes
       try {
         const id = (token as any).id as string | undefined;
-        if (id) {
-          const admin = await prisma.admin.findUnique({ where: { id }, include: { customRole: true } });
-          if (admin) {
-            token.role = admin.role;
-            (token as any).roleId = admin.roleId ?? null;
-            (token as any).permissions = (admin as any).customRole?.permissions ?? null;
+        const lastRefresh = (token as any).lastRefresh as number | undefined;
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000;
+        
+        if (id && (!token.role || !lastRefresh || (now - lastRefresh) > fiveMinutes)) {
+          const admin = await prisma.admin.findUnique({ 
+            where: { id, isActive: true }, 
+            include: { customRole: true } 
+          });
+          
+          if (admin && admin.role) {
+            // Only update if we have a valid role and it's not being downgraded from SUPER_ADMIN
+            if (admin.role === 'SUPER_ADMIN' || token.role !== 'SUPER_ADMIN') {
+              token.role = admin.role;
+              (token as any).roleId = admin.roleId ?? null;
+              (token as any).permissions = (admin as any).customRole?.permissions ?? null;
+              (token as any).lastRefresh = now;
+            }
           }
         }
-      } catch {}
+      } catch (error) {
+        console.error('Error refreshing admin role:', error);
+      }
       return token;
     },
     async session({ session, token }) {

@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import Button from '@/components/ui/button/Button';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 type AdminRow = {
   id: string;
@@ -16,6 +18,8 @@ type AdminRow = {
 };
 
 export default function AdminsPage() {
+  const { data: session, update: updateSession } = useSession();
+  const router = useRouter();
   const [rows, setRows] = useState<AdminRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
@@ -55,12 +59,26 @@ export default function AdminsPage() {
 
   const assignRole = async (adminId: string, roleId: string | null) => {
     const res = await apiClient.patch(`/admins/${adminId}`, { roleId });
-    if (res.success) fetchAdmins();
+    if (res.success) {
+      fetchAdmins();
+      // If we're updating our own role, refresh the session
+      if ((session?.user as any)?.id === adminId) {
+        await updateSession();
+        // Force a page reload to ensure all components get the updated session
+        router.refresh();
+      }
+    }
   };
 
   const toggleActive = async (adminId: string, next: boolean) => {
     const res = await apiClient.patch(`/admins/${adminId}`, { isActive: next });
-    if (res.success) fetchAdmins();
+    if (res.success) {
+      fetchAdmins();
+      // If we're disabling our own account, redirect to login
+      if ((session?.user as any)?.id === adminId && !next) {
+        router.push('/signin');
+      }
+    }
   };
 
   const createAdmin = async () => {
@@ -128,16 +146,20 @@ export default function AdminsPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{a.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{a.email}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <select
-                        className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        value={a.roleId || ''}
-                        onChange={(e) => assignRole(a.id, e.target.value || null)}
-                      >
-                        <option value="">— None —</option>
-                        {roles.map((r) => (
-                          <option key={r.id} value={r.id}>{r.name}</option>
-                        ))}
-                      </select>
+                      {a.role === 'SUPER_ADMIN' ? (
+                        <span className="text-gray-500 dark:text-gray-400">Super Admin</span>
+                      ) : (
+                        <select
+                          className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                          value={a.roleId || ''}
+                          onChange={(e) => assignRole(a.id, e.target.value || null)}
+                        >
+                          <option value="">— None —</option>
+                          {roles.map((r) => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {a.isActive ? (
@@ -147,9 +169,14 @@ export default function AdminsPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                      <button onClick={() => toggleActive(a.id, !a.isActive)} className="text-brand-600 hover:text-brand-700">
-                        {a.isActive ? 'Disable' : 'Enable'}
-                      </button>
+                      {a.role !== 'SUPER_ADMIN' && (
+                        <button onClick={() => toggleActive(a.id, !a.isActive)} className="text-brand-600 hover:text-brand-700">
+                          {a.isActive ? 'Disable' : 'Enable'}
+                        </button>
+                      )}
+                      {a.role === 'SUPER_ADMIN' && (
+                        <span className="text-gray-400 text-sm">Protected</span>
+                      )}
                     </td>
                   </tr>
                 ))

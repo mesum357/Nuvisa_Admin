@@ -76,6 +76,7 @@ export interface DashboardStats {
   totalUsers: number;
   totalRevenue: number;
   pendingApplications: number;
+  submittedApplications: number; // Add submitted applications
   approvedApplications: number;
   rejectedApplications: number;
   newApplicationsToday: number;

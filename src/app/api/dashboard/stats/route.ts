@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { backendGet } from '@/lib/backend-client';
 import { DashboardStats } from '@/types';
+import { canViewAmounts } from '@/lib/utils';
 
 export async function GET() {
   try {
@@ -67,8 +68,10 @@ export async function GET() {
     console.log('Total applications calculated:', totalApplications, '(from array:', applicationsData.length, ', from stats:', statsData?.total, ')');
     
     const pendingApplications = Number(statsData?.pending ?? 0);
+    const submittedApplications = Number(statsData?.submitted ?? 0); // Add submitted count
     const inProgress = Number(statsData?.in_progress ?? 0);
     const completed = Number(statsData?.completed ?? 0);
+    const approved = Number(statsData?.approved ?? 0);
     const rejected = Number(statsData?.rejected ?? 0);
 
     // Calculate revenue from applications (ensure applicationsData is an array)
@@ -118,10 +121,11 @@ export async function GET() {
     
     console.log('Total revenue calculated:', totalRevenue, 'Debug:', revenueDebug);
 
-    // Calculate today's applications (ensure applicationsData is an array)
-    const todayApplications = Array.isArray(applicationsData) ? applicationsData.filter((app: any) => {
+    // Calculate recent applications (last 30 days instead of just today)
+    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const recentApplications = Array.isArray(applicationsData) ? applicationsData.filter((app: any) => {
       const appDate = new Date(app.createdAt || app.created_at || new Date());
-      return appDate >= startOfToday && appDate < endOfToday;
+      return appDate >= thirtyDaysAgo && appDate < endOfToday;
     }).map((app: any) => ({
       id: app.id || app.applicationId || app.orderId,
       applicationNo: app.applicationNo || app.code || app.orderId || app.id,
@@ -137,6 +141,12 @@ export async function GET() {
         email: app.email 
       }
     })) : [];
+
+    // Calculate today's applications for today-specific metrics
+    const todayApplications = recentApplications.filter((app: any) => {
+      const appDate = new Date(app.submittedAt);
+      return appDate >= startOfToday && appDate < endOfToday;
+    });
 
     // Calculate today's users (ensure usersData is an array)
     const todayUsers = Array.isArray(usersData) ? usersData.filter((user: any) => {
@@ -182,20 +192,23 @@ export async function GET() {
     const normalized: DashboardStats = {
       totalApplications,
       totalUsers,
-      totalRevenue,
+      totalRevenue: canViewAmounts(session.user) ? totalRevenue : 0,
       pendingApplications,
-      approvedApplications: completed,
+      submittedApplications, // Add submitted applications
+      approvedApplications: approved, // Use separate approved count
       rejectedApplications: rejected,
       newApplicationsToday: Array.isArray(todayApplications) ? todayApplications.length : 0,
       newUsersToday: Array.isArray(todayUsers) ? todayUsers.length : 0,
-      revenueThisMonth: thisMonthRevenue,
+      revenueThisMonth: canViewAmounts(session.user) ? thisMonthRevenue : 0,
       applicationsByStatus: [
         { status: 'PENDING' as any, count: pendingApplications || 0 },
+        { status: 'SUBMITTED' as any, count: submittedApplications || 0 }, // Add submitted status
         { status: 'UNDER_REVIEW' as any, count: inProgress || 0 },
-        { status: 'APPROVED' as any, count: completed || 0 },
+        { status: 'COMPLETED' as any, count: completed || 0 },
+        { status: 'APPROVED' as any, count: approved || 0 },
         { status: 'REJECTED' as any, count: rejected || 0 },
       ],
-      recentApplications: Array.isArray(todayApplications) ? todayApplications.slice(0, 5) : [], // Show today's applications instead of recent
+      recentApplications: Array.isArray(recentApplications) ? recentApplications.slice(0, 5) : [], // Show recent applications from last 30 days
     };
 
     return NextResponse.json({ success: true, data: normalized });
