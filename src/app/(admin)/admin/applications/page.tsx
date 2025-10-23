@@ -152,6 +152,7 @@ function ApplicationsContent() {
               <option value="AT_EMBASSY">At Embassy</option>
               <option value="APPROVED">Approved</option>
               <option value="REJECTED">Rejected</option>
+              <option value="COMPLETED">Completed</option>
             </select>
             <div className="flex gap-2">
               <input
@@ -243,7 +244,7 @@ function ApplicationsContent() {
                           app.status
                         )}`}
                       >
-                        {(app.status || '').replace('_', ' ')}
+                        {(app.status || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                       </span>
                     </td>
                     {canViewAmounts(session?.user) && (

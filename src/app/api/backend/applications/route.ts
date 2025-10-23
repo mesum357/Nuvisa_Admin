@@ -21,13 +21,15 @@ export async function GET(request: NextRequest) {
 
     // Adjust to your backend endpoint and query params
     // Use the backend search endpoint to retrieve a list
-    // Map admin status to backend groups
+    // Map admin status to backend enum values
     const mapStatus = (s?: string) => {
       if (!s) return undefined;
       const v = s.toUpperCase();
-      if (v === 'PENDING') return 'new'; // Only draft/new/pending, NOT submitted
-      if (v === 'SUBMITTED') return 'submitted'; // Separate submitted status
+      if (v === 'PENDING') return 'draft';
+      if (v === 'SUBMITTED') return 'submitted';
       if (v === 'UNDER_REVIEW') return 'under_review';
+      if (v === 'APPOINTMENT_BOOKED') return 'appointment_booked';
+      if (v === 'AT_EMBASSY') return 'at_embassy';
       if (v === 'APPROVED') return 'approved';
       if (v === 'REJECTED') return 'rejected';
       if (v === 'COMPLETED') return 'completed';
@@ -35,10 +37,10 @@ export async function GET(request: NextRequest) {
     };
 
     const queryParams: Record<string, any> = {
-      page_no: page,
-      page_size: limit,
+      page: page,
+      limit: limit,
       status: mapStatus(status) || undefined,
-      q: search || undefined,
+      query: search || undefined,
       country: country || undefined,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
@@ -78,11 +80,15 @@ export async function GET(request: NextRequest) {
     const desiredSet = new Set<string>((() => {
       switch (desired) {
         case 'PENDING':
-          return ['new', 'draft', 'pending']; // Only draft/new/pending, NOT submitted
+          return ['draft'];
         case 'SUBMITTED':
-          return ['submitted']; // Separate submitted status
+          return ['submitted'];
         case 'UNDER_REVIEW':
-          return ['underreview', 'processing', 'appointmentbooked', 'atembassy'];
+          return ['under_review'];
+        case 'APPOINTMENT_BOOKED':
+          return ['appointment_booked'];
+        case 'AT_EMBASSY':
+          return ['at_embassy'];
         case 'APPROVED':
           return ['approved'];
         case 'REJECTED':
