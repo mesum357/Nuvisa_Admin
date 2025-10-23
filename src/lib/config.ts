@@ -10,7 +10,7 @@
 
 export const BACKEND_CONFIG = {
   // Backend API URL - use local backend for development
-  BASE_URL: 'http://localhost:4000',
+  BASE_URL: process.env.BACKEND_API_URL || 'http://localhost:4000',
   
   // Admin origin for CORS headers
   ADMIN_ORIGIN: process.env.ADMIN_PUBLIC_URL || 'http://localhost:3001',
