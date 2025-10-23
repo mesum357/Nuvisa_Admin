@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { seedComparisonSection } from './seeds/comparison-seed';
 
 const prisma = new PrismaClient();
 
@@ -92,6 +93,9 @@ async function main() {
     ],
     skipDuplicates: true,
   });
+
+  // Seed comparison section
+  await seedComparisonSection();
 }
 
 main()

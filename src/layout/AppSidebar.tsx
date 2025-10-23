@@ -51,6 +51,16 @@ const baseNavItems: NavItem[] = [
     icon: <PageIcon />,
     name: "Appointment Text",
     path: "/admin/appointment-text",
+  },
+  {
+    icon: <PageIcon />,
+    name: "FAQs",
+    path: "/admin/faqs",
+  },
+  {
+    icon: <PageIcon />,
+    name: "Comparison Section",
+    path: "/admin/comparison-section",
   }
 ];
 
@@ -69,6 +79,8 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/users')) return can('users', 'read');
       if (item.path.startsWith('/admin/admins')) return can('users', 'read');
       if (item.path.startsWith('/admin/appointment-text')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/faqs')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/comparison-section')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/roles')) return can('roles', 'read');
       return true;
     });

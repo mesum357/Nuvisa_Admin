@@ -152,3 +152,68 @@ export interface Country {
   updatedBy?: string | null;
 }
 
+export interface FAQ {
+  id: string;
+  question: string;
+  answer: string;
+  category?: string | null;
+  order: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
+export interface CreateFAQData {
+  question: string;
+  answer: string;
+  category?: string;
+  order?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateFAQData {
+  question?: string;
+  answer?: string;
+  category?: string;
+  order?: number;
+  isActive?: boolean;
+}
+
+export interface ComparisonSection {
+  id: string;
+  title: string;
+  leftSideTitle: string;
+  rightSideTitle: string;
+  leftSideImage?: string | null;
+  rightSideImage?: string | null;
+  leftSideItems: string[];
+  rightSideItems: string[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
+export interface CreateComparisonSectionData {
+  title: string;
+  leftSideTitle: string;
+  rightSideTitle: string;
+  leftSideImage?: string;
+  rightSideImage?: string;
+  leftSideItems: string[];
+  rightSideItems: string[];
+  isActive?: boolean;
+}
+
+export interface UpdateComparisonSectionData {
+  title?: string;
+  leftSideTitle?: string;
+  rightSideTitle?: string;
+  leftSideImage?: string;
+  rightSideImage?: string;
+  leftSideItems?: string[];
+  rightSideItems?: string[];
+  isActive?: boolean;
+}
+

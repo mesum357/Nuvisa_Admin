@@ -236,3 +236,37 @@ model AppointmentText {
   @@map("appointment_texts")
 }
 
+model FAQ {
+  id          String   @id @default(uuid())
+  question    String   @db.Text
+  answer      String   @db.Text
+  category    String?  // Optional category for grouping FAQs
+  order       Int      @default(0) // For custom ordering
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@index([category])
+  @@index([isActive])
+  @@index([order])
+  @@map("faqs")
+}
+
+model ComparisonSection {
+  id                String   @id @default(uuid())
+  title             String   @default("Travel Agency")
+  leftSideTitle     String   @default("Traditional Agency")
+  rightSideTitle    String   @default("NUvisa")
+  leftSideImage     String?  // URL to left side image
+  rightSideImage    String?  // URL to right side image
+  leftSideItems     Json     // Array of comparison items for left side
+  rightSideItems    Json     // Array of comparison items for right side
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?
+
+  @@map("comparison_sections")
+}
+
