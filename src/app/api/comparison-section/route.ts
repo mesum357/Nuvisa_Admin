@@ -1,28 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BACKEND_CONFIG, getBackendHeaders } from '@/lib/config';
-
-const BACKEND_URL = BACKEND_CONFIG.BASE_URL;
+import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const path = searchParams.get('path') || 'active';
     
-    const response = await fetch(`${BACKEND_URL}/comparison-section/${path}`, {
-      method: 'GET',
-      headers: getBackendHeaders(),
-    });
+    let data;
     
-    const data = await response.json();
-    
-    // Handle the backend response structure
-    if (data.status === 'success' && data.data) {
-      // Check if there's actual data in the results
-      if (data.data.results && Object.keys(data.data.results).length > 0) {
-        return NextResponse.json(data.data.results);
-      } else {
-        return NextResponse.json(null);
-      }
+    if (path === 'active') {
+      // Get active comparison section
+      data = await prisma.comparisonSection.findFirst({
+        where: { isActive: true },
+        orderBy: { updatedAt: 'desc' }
+      });
+    } else if (path === 'all') {
+      // Get all comparison sections
+      data = await prisma.comparisonSection.findMany({
+        orderBy: { createdAt: 'desc' }
+      });
+    } else {
+      // Get specific comparison section by ID
+      data = await prisma.comparisonSection.findUnique({
+        where: { id: path }
+      });
     }
     
     return NextResponse.json(data);
@@ -39,23 +40,32 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    const response = await fetch(`${BACKEND_URL}/comparison-section`, {
-      method: 'POST',
-      headers: getBackendHeaders(),
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-    
-    // Handle the backend response structure for POST requests
-    if (data.status === 'success' && data.data) {
-      return NextResponse.json({
-        success: true,
-        data: data.data.results || data.data
-      });
+    // Validate required fields
+    if (!body.title || !body.leftSideTitle || !body.rightSideTitle) {
+      return NextResponse.json(
+        { success: false, error: 'Title, leftSideTitle, and rightSideTitle are required' },
+        { status: 400 }
+      );
     }
     
-    return NextResponse.json(data);
+    const data = await prisma.comparisonSection.create({
+      data: {
+        title: body.title,
+        leftSideTitle: body.leftSideTitle,
+        rightSideTitle: body.rightSideTitle,
+        leftSideImage: body.leftSideImage || null,
+        rightSideImage: body.rightSideImage || null,
+        leftSideItems: body.leftSideItems || [],
+        rightSideItems: body.rightSideItems || [],
+        isActive: body.isActive !== undefined ? body.isActive : true,
+        updatedBy: body.updatedBy || null
+      }
+    });
+    
+    return NextResponse.json({
+      success: true,
+      data: data
+    });
   } catch (error) {
     console.error('Error creating comparison section:', error);
     return NextResponse.json(
@@ -78,29 +88,49 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const endpoint = action === 'toggle' 
-      ? `${BACKEND_URL}/comparison-section/${id}/toggle`
-      : `${BACKEND_URL}/comparison-section/${id}`;
-
-    const body = action === 'toggle' ? {} : await request.json();
+    let data;
     
-    const response = await fetch(endpoint, {
-      method: 'PATCH',
-      headers: getBackendHeaders(),
-      body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
-    });
-
-    const data = await response.json();
-    
-    // Handle the backend response structure for PATCH requests
-    if (data.status === 'success' && data.data) {
-      return NextResponse.json({
-        success: true,
-        data: data.data.results || data.data
+    if (action === 'toggle') {
+      // Toggle active status
+      const existing = await prisma.comparisonSection.findUnique({
+        where: { id }
+      });
+      
+      if (!existing) {
+        return NextResponse.json(
+          { success: false, error: 'Comparison section not found' },
+          { status: 404 }
+        );
+      }
+      
+      data = await prisma.comparisonSection.update({
+        where: { id },
+        data: { isActive: !existing.isActive }
+      });
+    } else {
+      // Update comparison section
+      const body = await request.json();
+      
+      data = await prisma.comparisonSection.update({
+        where: { id },
+        data: {
+          title: body.title,
+          leftSideTitle: body.leftSideTitle,
+          rightSideTitle: body.rightSideTitle,
+          leftSideImage: body.leftSideImage,
+          rightSideImage: body.rightSideImage,
+          leftSideItems: body.leftSideItems,
+          rightSideItems: body.rightSideItems,
+          isActive: body.isActive,
+          updatedBy: body.updatedBy
+        }
       });
     }
     
-    return NextResponse.json(data);
+    return NextResponse.json({
+      success: true,
+      data: data
+    });
   } catch (error) {
     console.error('Error updating comparison section:', error);
     return NextResponse.json(
@@ -122,14 +152,26 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    const response = await fetch(`${BACKEND_URL}/comparison-section/${id}`, {
-      method: 'DELETE',
-      headers: getBackendHeaders(),
+    // Check if comparison section exists
+    const existing = await prisma.comparisonSection.findUnique({
+      where: { id }
     });
-
-    const data = await response.json();
     
-    return NextResponse.json(data);
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: 'Comparison section not found' },
+        { status: 404 }
+      );
+    }
+    
+    await prisma.comparisonSection.delete({
+      where: { id }
+    });
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Comparison section deleted successfully'
+    });
   } catch (error) {
     console.error('Error deleting comparison section:', error);
     return NextResponse.json(
