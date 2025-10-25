@@ -8,6 +8,8 @@ type AppointmentText = {
   id: string;
   countryName: string;
   appointmentText: string;
+  sectionTitle: string;
+  sectionDescription: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -34,6 +36,11 @@ export default function AppointmentTextPage() {
   const [saving, setSaving] = useState<boolean>(false);
   const [editingCountry, setEditingCountry] = useState<string | null>(null);
   const [formData, setFormData] = useState<{ [key: string]: string }>({});
+  const [sectionContent, setSectionContent] = useState({
+    title: "Choose Your Country",
+    description: "We support 20 countries over all the visa centres in the UK"
+  });
+  const [editingSection, setEditingSection] = useState<boolean>(false);
 
   const fetchAppointmentTexts = async () => {
     setLoading(true);
@@ -48,6 +55,14 @@ export default function AppointmentTextPage() {
           initialFormData[item.countryName] = item.appointmentText;
         });
         setFormData(initialFormData);
+        
+        // Get section content from first record (all should have same section content)
+        if (res.data.length > 0) {
+          setSectionContent({
+            title: res.data[0].sectionTitle || "Choose Your Country",
+            description: res.data[0].sectionDescription || "We support 20 countries over all the visa centres in the UK"
+          });
+        }
       }
     } catch (error) {
       console.error("Failed to fetch appointment texts:", error);
@@ -108,6 +123,29 @@ export default function AppointmentTextPage() {
     return appointmentTexts.some(item => item.countryName === countryName);
   };
 
+  const handleSaveSectionContent = async () => {
+    if (!sectionContent.title.trim() || !sectionContent.description.trim()) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await apiClient.patch("/appointment-text", {
+        sectionTitle: sectionContent.title,
+        sectionDescription: sectionContent.description,
+      });
+      
+      await fetchAppointmentTexts();
+      setEditingSection(false);
+      alert("Section content updated successfully!");
+    } catch (error) {
+      console.error("Failed to save section content:", error);
+      alert("Failed to save section content");
+    }
+    setSaving(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -119,9 +157,91 @@ export default function AppointmentTextPage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="animate-pulse text-gray-500 dark:text-gray-400">Loading appointment texts...</div>
-      ) : (
+      {/* Section Content Management */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Section Content</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Manage the title and description for the "Choose Your Country" section
+            </p>
+          </div>
+          {!editingSection && (
+            <Button onClick={() => setEditingSection(true)} disabled={saving}>
+              Edit Section Content
+            </Button>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Section Title
+            </label>
+            {editingSection ? (
+              <input
+                type="text"
+                value={sectionContent.title}
+                onChange={(e) => setSectionContent({ ...sectionContent, title: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter section title"
+                disabled={saving}
+              />
+            ) : (
+              <p className="text-lg font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                {sectionContent.title}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Section Description
+            </label>
+            {editingSection ? (
+              <textarea
+                value={sectionContent.description}
+                onChange={(e) => setSectionContent({ ...sectionContent, description: e.target.value })}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter section description"
+                disabled={saving}
+              />
+            ) : (
+              <p className="text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                {sectionContent.description}
+              </p>
+            )}
+          </div>
+
+          {editingSection && (
+            <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Button 
+                onClick={handleSaveSectionContent} 
+                disabled={saving}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+              <Button 
+                onClick={() => setEditingSection(false)} 
+                disabled={saving}
+                variant="outline"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      {/* Countries Management */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Country Appointment Texts</h2>
+        {loading ? (
+          <div className="animate-pulse text-gray-500 dark:text-gray-400">Loading appointment texts...</div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {STATIC_COUNTRIES.map((countryName) => {
             const isEditing = editingCountry === countryName;
@@ -203,13 +323,14 @@ export default function AppointmentTextPage() {
             );
           })}
         </div>
-      )}
+        )}
 
-      <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Default Text</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Countries without custom appointment text will display: <strong>&quot;Appointment in 10 days or less&quot;</strong>
-        </p>
+        <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Default Text</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Countries without custom appointment text will display: <strong>&quot;Appointment in 10 days or less&quot;</strong>
+          </p>
+        </div>
       </div>
     </div>
   );

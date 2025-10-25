@@ -229,6 +229,8 @@ model AppointmentText {
   id             String   @id @default(uuid())
   countryName    String   @unique
   appointmentText String  @default("Appointment in 10 days or less")
+  sectionTitle   String   @default("Choose Your Country")
+  sectionDescription String @default("We support 20 countries over all the visa centres in the UK")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   updatedBy      String?
@@ -268,5 +270,50 @@ model ComparisonSection {
   updatedBy         String?
 
   @@map("comparison_sections")
+}
+
+model HeaderContent {
+  id                String   @id @default(uuid())
+  key               String   @unique
+  value             String   @db.Text
+  type              String   @default("text") // text, url, email, phone
+  section           String   // banner, navigation, contact, etc.
+  isActive          Boolean  @default(true)
+  order             Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?
+
+  @@map("header_content")
+}
+
+model FooterContent {
+  id                String   @id @default(uuid())
+  key               String   @unique
+  value             String   @db.Text
+  type              String   @default("text") // text, url, email, phone
+  section           String   // social, links, company_info, etc.
+  isActive          Boolean  @default(true)
+  order             Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?
+
+  @@map("footer_content")
+}
+
+model HeroContent {
+  id                String   @id @default(uuid())
+  key               String   @unique
+  value             String   @db.Text
+  type              String   @default("text") // text, url, email, phone
+  section           String   // title, description, cta, etc.
+  isActive          Boolean  @default(true)
+  order             Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?
+
+  @@map("hero_content")
 }
 

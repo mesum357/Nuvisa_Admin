@@ -98,6 +98,45 @@ export interface SiteContent {
   updatedBy?: string | null;
 }
 
+export interface HeaderContent {
+  id: string;
+  key: string;
+  value: string;
+  type: string;
+  section: string;
+  isActive: boolean;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
+export interface FooterContent {
+  id: string;
+  key: string;
+  value: string;
+  type: string;
+  section: string;
+  isActive: boolean;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
+export interface HeroContent {
+  id: string;
+  key: string;
+  value: string;
+  type: string;
+  section: string;
+  isActive: boolean;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
 export interface Notification {
   id: string;
   type: string;

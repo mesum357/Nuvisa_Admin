@@ -52,6 +52,8 @@ export async function GET(request: NextRequest) {
       orderBy: { countryName: 'asc' },
     });
 
+    console.log('GET appointment texts:', appointmentTexts);
+
     return NextResponse.json({
       success: true,
       data: appointmentTexts || [],
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
     console.log('Prisma client keys:', Object.keys(prisma));
 
     const data = await request.json();
-    const { countryName, appointmentText } = data;
+    const { countryName, appointmentText, sectionTitle, sectionDescription } = data;
 
     if (!countryName || !appointmentText) {
       return NextResponse.json(
@@ -106,18 +108,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert appointment text
-    console.log('Attempting to upsert appointment text:', { countryName, appointmentText });
+    // Upsert appointment text with section content
+    console.log('Attempting to upsert appointment text:', { countryName, appointmentText, sectionTitle, sectionDescription });
+    
+    const updateData: any = {
+      appointmentText: appointmentText.trim(),
+      updatedBy: (session.user as any).id,
+    };
+
+    // Only update section content if provided
+    if (sectionTitle !== undefined) updateData.sectionTitle = sectionTitle.trim();
+    if (sectionDescription !== undefined) updateData.sectionDescription = sectionDescription.trim();
     
     const result = await prisma.appointmentText.upsert({
       where: { countryName },
-      update: { 
-        appointmentText: appointmentText.trim(),
-        updatedBy: (session.user as any).id,
-      },
+      update: updateData,
       create: {
         countryName: countryName.trim(),
         appointmentText: appointmentText.trim(),
+        sectionTitle: sectionTitle?.trim() || "Choose Your Country",
+        sectionDescription: sectionDescription?.trim() || "We support 20 countries over all the visa centres in the UK",
         updatedBy: (session.user as any).id,
       },
     });
@@ -138,6 +148,91 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(
       { success: false, error: `Failed to update appointment text: ${error.message}` },
+      { status: 500, headers: getCorsHeaders(request) }
+    );
+  }
+}
+
+// PATCH /api/appointment-text - Update section content (admin only)
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401, headers: getCorsHeaders(request) }
+      );
+    }
+
+    // Check if prisma is available
+    if (!prisma) {
+      console.error('Prisma client not available');
+      return NextResponse.json(
+        { success: false, error: 'Database connection not available' },
+        { status: 500, headers: getCorsHeaders(request) }
+      );
+    }
+
+    const data = await request.json();
+    const { sectionTitle, sectionDescription } = data;
+
+    console.log('PATCH request received:', { sectionTitle, sectionDescription });
+
+    if (!sectionTitle && !sectionDescription) {
+      return NextResponse.json(
+        { success: false, error: 'Section title or description is required' },
+        { status: 400, headers: getCorsHeaders(request) }
+      );
+    }
+
+    // Update all appointment text records with new section content
+    const updateData: any = {
+      updatedBy: (session.user as any).id,
+    };
+
+    if (sectionTitle !== undefined) updateData.sectionTitle = sectionTitle.trim();
+    if (sectionDescription !== undefined) updateData.sectionDescription = sectionDescription.trim();
+
+    // First, check if any appointment text records exist
+    const existingRecords = await prisma.appointmentText.count();
+    console.log('Existing records count:', existingRecords);
+    
+    if (existingRecords === 0) {
+      // If no records exist, create a default one with the section content
+      console.log('Creating default record with section content');
+      const newRecord = await prisma.appointmentText.create({
+        data: {
+          countryName: "DEFAULT",
+          appointmentText: "Appointment in 10 days or less",
+          sectionTitle: sectionTitle?.trim() || "Choose Your Country",
+          sectionDescription: sectionDescription?.trim() || "We support 20 countries over all the visa centres in the UK",
+          updatedBy: (session.user as any).id,
+        },
+      });
+      console.log('Created record:', newRecord);
+    } else {
+      // Update all existing records
+      console.log('Updating existing records with:', updateData);
+      const result = await prisma.appointmentText.updateMany({
+        data: updateData,
+      });
+      console.log('Updated records:', result);
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { message: 'Section content updated successfully' },
+    }, { headers: getCorsHeaders(request) });
+  } catch (error: any) {
+    console.error('Error updating section content:', error);
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to update section content',
+        details: error.message 
+      },
       { status: 500, headers: getCorsHeaders(request) }
     );
   }
