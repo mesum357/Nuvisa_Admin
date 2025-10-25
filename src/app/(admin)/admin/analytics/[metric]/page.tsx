@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { formatCurrency, canViewAmounts } from '@/lib/utils';
@@ -64,18 +64,7 @@ export default function AnalyticsPage() {
     }
   };
 
-  useEffect(() => {
-    // Gate revenue metric to super admin only
-    if (metric === 'revenue' && !canViewAmounts(session?.user)) {
-      router.replace('/admin');
-      return;
-    }
-    if (metric) {
-      fetchHistoricalData();
-    }
-  }, [metric, period, session]);
-
-  const fetchHistoricalData = async () => {
+  const fetchHistoricalData = useCallback(async () => {
     setLoading(true);
     try {
       const response = await apiClient.get<HistoricalData>('/dashboard/historical', {
@@ -114,7 +103,18 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [period, metric]);
+
+  useEffect(() => {
+    // Gate revenue metric to super admin only
+    if (metric === 'revenue' && !canViewAmounts(session?.user)) {
+      router.replace('/admin');
+      return;
+    }
+    if (metric) {
+      fetchHistoricalData();
+    }
+  }, [metric, period, session, fetchHistoricalData, router]);
 
   const getChartOptions = () => {
     if (!data || !data.monthlyData || !Array.isArray(data.monthlyData) || data.monthlyData.length === 0) {

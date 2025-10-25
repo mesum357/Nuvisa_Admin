@@ -163,7 +163,7 @@ export default function AppointmentTextPage() {
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Section Content</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Manage the title and description for the "Choose Your Country" section
+              Manage the title and description for the &quot;Choose Your Country&quot; section
             </p>
           </div>
           {!editingSection && (

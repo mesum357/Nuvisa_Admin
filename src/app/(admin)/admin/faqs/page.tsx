@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Plus, Edit2, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { FAQ, CreateFAQData, UpdateFAQData } from '@/types';
@@ -26,11 +26,7 @@ export default function FAQManagementPage() {
     isActive: true,
   });
 
-  useEffect(() => {
-    fetchFAQs();
-  }, []);
-
-  const fetchFAQs = async () => {
+  const fetchFAQs = useCallback(async () => {
     setLoading(true);
     try {
       const params: Record<string, string> = {};
@@ -47,7 +43,11 @@ export default function FAQManagementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, categoryFilter, statusFilter]);
+
+  useEffect(() => {
+    fetchFAQs();
+  }, [fetchFAQs]);
 
   const handleCreateFAQ = async () => {
     if (!formData.question || !formData.answer) {

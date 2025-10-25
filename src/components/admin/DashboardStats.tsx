@@ -104,7 +104,7 @@ export default function DashboardStats() {
     }
 
     return items;
-  }, [stats]);
+  }, [stats, session?.user]);
 
   if (loading) {
     return (
