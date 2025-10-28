@@ -317,3 +317,50 @@ model HeroContent {
   @@map("hero_content")
 }
 
+model KlarnaContent {
+  id                String   @id @default(uuid())
+  key               String   @unique
+  value             String   @db.Text
+  type              String   @default("text") // text, number, currency
+  section           String   // heading, subtitle, details
+  isActive          Boolean  @default(true)
+  order             Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?
+
+  @@map("klarna_content")
+}
+
+model ProcessContent {
+  id                String   @id @default(uuid())
+  key               String   @unique
+  value             String   @db.Text
+  type              String   @default("text") // text, image_url
+  section           String   // heading, description, step_title, step_description
+  isActive          Boolean  @default(true)
+  order             Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?
+
+  @@map("process_content")
+}
+
+model EmailTemplate {
+  id                String   @id @default(uuid())
+  key               String   @unique // unique identifier for the template (e.g., "status_update", "otp_email")
+  name              String   // user-friendly name
+  subject           String   @db.Text // email subject with variable placeholders
+  body              String   @db.Text // email body HTML with variable placeholders
+  description       String?  // optional description
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?
+
+  @@index([key])
+  @@index([isActive])
+  @@map("email_templates")
+}
+

@@ -76,6 +76,21 @@ const baseNavItems: NavItem[] = [
     icon: <PageIcon />,
     name: "Hero Content",
     path: "/admin/hero-content",
+  },
+  {
+    icon: <PageIcon />,
+    name: "Klarna Content",
+    path: "/admin/klarna-content",
+  },
+  {
+    icon: <PageIcon />,
+    name: "Process Content",
+    path: "/admin/process-content",
+  },
+  {
+    icon: <PageIcon />,
+    name: "Email Templates",
+    path: "/admin/email-templates",
   }
 ];
 
@@ -98,7 +113,10 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/comparison-section')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/header-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/footer-content')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/klarna-content')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/process-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/hero-content')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/email-templates')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/roles')) return can('roles', 'read');
       return true;
     });

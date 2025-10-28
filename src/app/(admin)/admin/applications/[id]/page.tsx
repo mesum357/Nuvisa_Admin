@@ -338,14 +338,6 @@ export default function ApplicationDetailsPage() {
                   </p>
                 </div>
               )}
-              {(application as any).paymentStatus && (
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Payment Status</p>
-                  <p className="text-base font-medium text-gray-900 dark:text-white mt-1">
-                    {(application as any).paymentStatus}
-                  </p>
-                </div>
-              )}
               {(application as any).paymentMethod && (
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Payment Method</p>

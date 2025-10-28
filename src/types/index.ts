@@ -137,6 +137,45 @@ export interface HeroContent {
   updatedBy?: string | null;
 }
 
+export interface KlarnaContent {
+  id: string;
+  key: string;
+  value: string;
+  type: string;
+  section: string;
+  isActive: boolean;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
+export interface ProcessContent {
+  id: string;
+  key: string;
+  value: string;
+  type: string;
+  section: string;
+  isActive: boolean;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
+export interface EmailTemplate {
+  id: string;
+  key: string;
+  name: string;
+  subject: string;
+  body: string;
+  description?: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
 export interface Notification {
   id: string;
   type: string;

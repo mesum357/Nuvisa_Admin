@@ -101,6 +101,61 @@ async function main() {
   // Seed hero content
   await seedHeroContent();
 
+  // Seed default email templates
+  const emailTemplatesData = [
+    {
+      key: 'otp_email',
+      name: 'OTP Email',
+      subject: 'Your OTP Code',
+      body: '<p>Hi,</p><p>Your One-Time Password (OTP) code is:</p><p style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #000000; background: #f5f5f5; padding: 20px; display: inline-block; border-radius: 8px; margin: 20px 0;">${otp}</p><p>This code will expire in <strong>10 minutes</strong>.</p><p>If you did not request this code, please ignore this email.</p>',
+      description: 'Email template for OTP verification',
+      isActive: true,
+    },
+    {
+      key: 'status_update',
+      name: 'Application Status Update',
+      subject: 'Visa Application Status Update - ${status}',
+      body: '<p>Hi ${userName},</p><p>Your visa application status has been updated:</p><p><strong>Previous Status:</strong> ${oldStatus || "Unknown"}</p><p><strong>New Status:</strong> ${status}</p><p><strong>Message:</strong> ${message}</p><p><strong>Additional Notes:</strong> ${notes}</p><p>Please log in to your account to view more details.</p>',
+      description: 'Email template for application status updates',
+      isActive: true,
+    },
+    {
+      key: 'application_submitted',
+      name: 'Application Submitted',
+      subject: 'Visa Application Submitted Successfully',
+      body: '<p>Hi ${userName},</p><p>Your visa application has been submitted successfully.</p><p><strong>Application Number:</strong> ${applicationNo}</p><p>We will review your application and update you on the status.</p>',
+      description: 'Email template for successful application submission',
+      isActive: true,
+    },
+    {
+      key: 'application_approved',
+      name: 'Application Approved',
+      subject: 'Congratulations! Your Visa Application Has Been Approved',
+      body: '<p>Hi ${userName},</p><p>Congratulations! Your visa application has been approved.</p><p><strong>Application Number:</strong> ${applicationNo}</p><p>Please check your account for further instructions.</p>',
+      description: 'Email template for approved applications',
+      isActive: true,
+    },
+    {
+      key: 'application_rejected',
+      name: 'Application Rejected',
+      subject: 'Visa Application Update',
+      body: '<p>Hi ${userName},</p><p>Your visa application status has been updated.</p><p><strong>Application Number:</strong> ${applicationNo}</p><p><strong>Status:</strong> ${status}</p><p><strong>Notes:</strong> ${notes}</p><p>Please contact us if you have any questions.</p>',
+      description: 'Email template for rejected applications',
+      isActive: true,
+    },
+  ];
+
+  for (const template of emailTemplatesData) {
+    await prisma.emailTemplate.upsert({
+      where: { key: template.key },
+      update: {},
+      create: {
+        ...template,
+        updatedBy: admin.id,
+      },
+    });
+  }
+
   // Seed default header content
   const headerContentData = [
     // Banner content (from original components)
