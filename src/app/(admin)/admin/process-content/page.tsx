@@ -82,7 +82,7 @@ export default function ProcessContentPage() {
       }
       await fetchContents();
       alert('Default content created successfully!');
-    } catch (error) {
+    } catch {
       alert('Failed to create content');
     }
     
@@ -116,7 +116,7 @@ export default function ProcessContentPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Process Content Management</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Manage the "We're process driven" section content
+              Manage the &quot;We&apos;re process driven&quot; section content
             </p>
           </div>
         </div>
@@ -149,7 +149,7 @@ export default function ProcessContentPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Process Content Management</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage the "We're process driven" section content
+            Manage the &quot;We&apos;re process driven&quot; section content
           </p>
         </div>
       </div>
@@ -259,7 +259,7 @@ export default function ProcessContentPage() {
       {/* Steps Section */}
       <ComponentCard title="Process Steps">
         <div className="space-y-4">
-          {steps.map((content, index) => {
+          {steps.map((content) => {
             const stepNumber = Math.floor((content.order - 3) / 2) + 1;
             const isTitle = content.section === 'step_title';
             

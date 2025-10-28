@@ -10,7 +10,6 @@ export default function EmailTemplatesPage() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [logoPreview, setLogoPreview] = useState<string>('');
@@ -27,7 +26,7 @@ export default function EmailTemplatesPage() {
 
   const fetchSocialLinks = async () => {
     try {
-      const response = await apiClient.get('/social-links');
+      const response = await apiClient.get<{twitter: string; facebook: string; instagram: string; linkedin: string}>('/social-links');
       if (response.success && response.data) {
         setSocialLinks({
           twitter: response.data.twitter || '',
@@ -147,7 +146,6 @@ export default function EmailTemplatesPage() {
     });
 
     if (response.success) {
-      setEditingTemplate(null);
       await fetchTemplates();
     }
     setSaving(false);
