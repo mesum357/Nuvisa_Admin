@@ -77,7 +77,7 @@ function ApplicationsContent() {
         startDate: filters.dateFrom,
         endDate: filters.dateTo,
       });
-      
+
       if (response.success && response.data) {
         downloadCSV(response.data, `applications-${Date.now()}`);
       } else {

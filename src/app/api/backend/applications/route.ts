@@ -36,11 +36,18 @@ export async function GET(request: NextRequest) {
       return undefined;
     };
 
+    // Check if search looks like a formatted application number (AI########)
+    const searchTrimmed = search ? search.trim() : '';
+    const looksLikeAppNumber = searchTrimmed && /^AI\d{1,8}$/i.test(searchTrimmed);
+    
+    // If searching by application number format, don't send query to backend
+    // (backend searches by raw ID which won't match formatted number)
+    // Instead, we'll fetch more broadly and filter client-side
     const queryParams: Record<string, any> = {
-      page: page,
-      limit: limit,
+      page: looksLikeAppNumber ? '1' : page, // Start from page 1 when searching by app number
+      limit: looksLikeAppNumber ? '1000' : limit, // Fetch more when searching by app number to find the match
       status: mapStatus(status) || undefined,
-      query: search || undefined,
+      query: looksLikeAppNumber ? undefined : (search || undefined), // Don't send query if it's an app number format
       country: country || undefined,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
@@ -68,6 +75,7 @@ export async function GET(request: NextRequest) {
     const total = results?.pagination?.total || envelope?.data?.recordsCount || results.total || results.count || (Array.isArray(items) ? items.length : 0);
 
     const list = Array.isArray(items) ? items : [];
+    let totalAfterFilter: number | undefined = undefined; // Will be set if we filter by application number
 
     // Comprehensive status normalization and filtering
     const normalizeBackendStatus = (s?: string) => {
@@ -105,6 +113,51 @@ export async function GET(request: NextRequest) {
     } else {
       items = list;
     }
+
+    // Helper function to format application ID (same logic as used elsewhere)
+    const formatApplicationId = (rawId: any) => {
+      if (!rawId) return null;
+      const numericTail = (source: any, length: number) => {
+        if (!source) return "".padStart(length, "0");
+        let digits = String(source).replace(/\D+/g, "");
+        if (digits.length < length) {
+          const codes = Array.from(String(source))
+            .map((c) => c.charCodeAt(0))
+            .join("");
+          digits = (digits + codes).replace(/\D+/g, "");
+        }
+        if (!digits.length) {
+          digits = "0".repeat(length);
+        }
+        return digits.slice(-length).padStart(length, "0");
+      };
+      return `AI${numericTail(rawId, 8)}`;
+    };
+
+    // Filter by formatted application number if search looks like one
+    // Note: If searching by formatted app number, backend search might not find it
+    // because backend searches by raw ID, not formatted number
+    let filteredItems = items;
+    
+    if (looksLikeAppNumber && searchTrimmed) {
+      // Filter items where the formatted application number matches
+      filteredItems = items.filter((it: any) => {
+        const formattedId = formatApplicationId(it.id || it.applicationId);
+        return formattedId && formattedId.toUpperCase() === searchTrimmed.toUpperCase();
+      });
+      
+      // Update total count to reflect the filtered results
+      totalAfterFilter = filteredItems.length;
+      
+      // Apply pagination to filtered results
+      const pageNum = parseInt(page, 10);
+      const limitNum = parseInt(limit, 10);
+      const offset = (pageNum - 1) * limitNum;
+      filteredItems = filteredItems.slice(offset, offset + limitNum);
+      
+      items = filteredItems;
+    }
+
     // Normalize to Admin UI expected shape
     const uiItems = (Array.isArray(items) ? items : list).map((it: any) => {
       // Calculate total payment from all travelers
@@ -122,24 +175,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Use the same formatting as frontend for consistency
-      const formatApplicationId = (rawId: any) => {
-        if (!rawId) return null;
-        const numericTail = (source: any, length: number) => {
-          if (!source) return "".padStart(length, "0");
-          let digits = String(source).replace(/\D+/g, "");
-          if (digits.length < length) {
-            const codes = Array.from(String(source))
-              .map((c) => c.charCodeAt(0))
-              .join("");
-            digits = (digits + codes).replace(/\D+/g, "");
-          }
-          if (!digits.length) {
-            digits = "0".repeat(length);
-          }
-          return digits.slice(-length).padStart(length, "0");
-        };
-        return `AI${numericTail(rawId, 8)}`;
-      };
+      // (formatApplicationId is now defined earlier above)
 
       const formatOrderId = (rawOrderId: any) => {
         if (!rawOrderId) return null;
@@ -189,9 +225,9 @@ export async function GET(request: NextRequest) {
         pagination: {
           page: Number(results?.pagination?.page ?? page),
           limit: Number(results?.pagination?.limit ?? limit),
-          total: Number(total || uiItems.length || 0),
+          total: Number(totalAfterFilter !== undefined ? totalAfterFilter : (total || uiItems.length || 0)),
           totalPages: Number(
-            results?.pagination?.totalPages ?? Math.ceil((Number(total || uiItems.length || 0)) / Number((results?.pagination?.limit ?? limit) || 1))
+            results?.pagination?.totalPages ?? Math.ceil(Number(totalAfterFilter !== undefined ? totalAfterFilter : (total || uiItems.length || 0)) / Number((results?.pagination?.limit ?? limit) || 1))
           ),
         },
       },

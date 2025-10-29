@@ -5,7 +5,6 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get('category');
-    const limit = searchParams.get('limit');
 
     const where: any = {
       isActive: true, // Only return active FAQs for public API
@@ -21,7 +20,6 @@ export async function GET(request: NextRequest) {
         { order: 'asc' },
         { createdAt: 'desc' },
       ],
-      take: limit ? parseInt(limit) : undefined,
       select: {
         id: true,
         question: true,
@@ -31,14 +29,39 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: faqs,
     });
+
+    // Add CORS headers
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    return response;
   } catch (error: any) {
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Failed to fetch FAQs' },
       { status: 500 }
     );
+
+    // Add CORS headers to error response too
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    return response;
   }
+}
+
+// Handle preflight requests
+export async function OPTIONS(request: NextRequest) {
+  const response = new NextResponse(null, { status: 200 });
+
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  return response;
 }

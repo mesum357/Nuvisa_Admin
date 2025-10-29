@@ -128,7 +128,26 @@ export async function GET() {
       return appDate >= thirtyDaysAgo && appDate < endOfToday;
     }).map((app: any) => ({
       id: app.id || app.applicationId || app.orderId,
-      applicationNo: app.applicationNo || app.code || app.orderId || app.id,
+      // Prefer formatted application id (AI########). Fallback to derive from id, then raw applicationNo.
+      applicationNo: (
+        app.formattedApplicationId
+        || ((): string => {
+          const rawId = app.id || app.applicationId || app.code || app.orderId || app._id;
+          if (!rawId) return String(app.applicationNo || '');
+          const toDigits = (source: any, length: number) => {
+            if (!source) return ''.padStart(length, '0');
+            let digits = String(source).replace(/\D+/g, '');
+            if (digits.length < length) {
+              const codes = Array.from(String(source)).map((c) => c.charCodeAt(0)).join('');
+              digits = (digits + codes).replace(/\D+/g, '');
+            }
+            if (!digits.length) digits = '0'.repeat(length);
+            return digits.slice(-length).padStart(length, '0');
+          };
+          return `AI${toDigits(rawId, 8)}`;
+        })()
+        || String(app.applicationNo || '')
+      ),
       status: app.status || app.applicationStatus || 'PENDING',
       totalAmount: Number(app.totalAmount || app.amountPaid || app.amountPaidTotal || 0),
       paidAmount: Number(app.paidAmount || app.amountPaid || app.amountPaidTotal || 0),
