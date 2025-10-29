@@ -347,6 +347,21 @@ model ProcessContent {
   @@map("process_content")
 }
 
+model SliderContent {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String   @db.Text
+  type      String   @default("text") // text, number, json
+  section   String   // badges, embassy_note, urgent_note, counters, slots, banner
+  isActive  Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("slider_content")
+}
+
 model EmailTemplate {
   id                String   @id @default(uuid())
   key               String   @unique // unique identifier for the template (e.g., "status_update", "otp_email")

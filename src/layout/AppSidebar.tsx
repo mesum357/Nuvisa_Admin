@@ -79,6 +79,11 @@ const baseNavItems: NavItem[] = [
   },
   {
     icon: <PageIcon />,
+    name: "Slider Content",
+    path: "/admin/slider-content",
+  },
+  {
+    icon: <PageIcon />,
     name: "Klarna Content",
     path: "/admin/klarna-content",
   },
@@ -113,6 +118,7 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/comparison-section')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/header-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/footer-content')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/slider-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/klarna-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/process-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/hero-content')) return can('siteContent', 'read');
