@@ -23,6 +23,14 @@ export default function SliderContentPage() {
   const [editingSections, setEditingSections] = useState<Record<string, string>>({});
   const [editingOrders, setEditingOrders] = useState<Record<string, number>>({});
   const [editingActive, setEditingActive] = useState<Record<string, boolean>>({});
+  const [basePriceGbp, setBasePriceGbp] = useState<string>("");
+  const [basePriceKeyExists, setBasePriceKeyExists] = useState<boolean>(false);
+
+  const humanizeKey = (key: string) => {
+    if (!key) return '';
+    const spaced = key.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+    return spaced.replace(/\b\w/g, (c) => c.toUpperCase());
+  };
 
   useEffect(() => {
     fetchContents();
@@ -50,6 +58,29 @@ export default function SliderContentPage() {
       setEditingSections(sections);
       setEditingOrders(orders);
       setEditingActive(active);
+
+      // Initialize dedicated base price field from known keys if present
+      const baseKeyOrder = [
+        'visa_base_price_gbp',
+        'base_fee_gbp',
+        'visa_price_gbp',
+        'visa_price',
+        'base_fee',
+      ];
+      let foundKey: string | null = null;
+      for (const k of baseKeyOrder) {
+        if (values[k] !== undefined) {
+          foundKey = k;
+          break;
+        }
+      }
+      if (foundKey) {
+        setBasePriceGbp(values[foundKey] || "");
+        setBasePriceKeyExists(foundKey === 'visa_base_price_gbp');
+      } else {
+        setBasePriceGbp("");
+        setBasePriceKeyExists(false);
+      }
     }
     setLoading(false);
   };
@@ -103,6 +134,39 @@ export default function SliderContentPage() {
     setSaving(false);
   };
 
+  const handleSaveBasePrice = async () => {
+    const trimmed = (basePriceGbp || '').trim();
+    if (!trimmed) return;
+    const num = Number(trimmed);
+    if (!Number.isFinite(num) || num <= 0) {
+      alert('Please enter a valid positive number for price');
+      return;
+    }
+    setSaving(true);
+    // If the exact key exists, PATCH; otherwise create canonical key
+    const hasCanonical = contents.some((c) => c.key === 'visa_base_price_gbp');
+    if (hasCanonical) {
+      await apiClient.patch('/slider-content', {
+        key: 'visa_base_price_gbp',
+        value: String(num),
+        type: 'number',
+        section: 'pricing',
+        isActive: true,
+      });
+    } else {
+      await apiClient.post('/slider-content', {
+        key: 'visa_base_price_gbp',
+        value: String(num),
+        type: 'number',
+        section: 'pricing',
+        order: 0,
+        isActive: true,
+      });
+    }
+    await fetchContents();
+    setSaving(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -113,6 +177,39 @@ export default function SliderContentPage() {
 
   return (
     <div className="space-y-6">
+      <ComponentCard title="Visa Base Price (GBP)" desc="Controls the base visa fee shown on the homepage slider.">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
+          <div className="md:col-span-2">
+            <div className="text-xs text-gray-500">Label</div>
+            <div className="text-sm break-words">{humanizeKey('visa_base_price_gbp')}</div>
+            <div className="text-[10px] text-gray-500 mt-1">Key: <span className="font-mono">visa_base_price_gbp</span></div>
+          </div>
+          <div className="md:col-span-2">
+            <div className="text-xs text-gray-500">Value (GBP)</div>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              className="w-full border px-2 py-1 rounded"
+              value={basePriceGbp}
+              onChange={(e) => setBasePriceGbp(e.target.value)}
+            />
+          </div>
+          <div className="md:col-span-1">
+            <div className="text-xs text-gray-500">Type</div>
+            <input className="w-full border px-2 py-1 rounded" value={'number'} readOnly />
+          </div>
+          <div className="md:col-span-1">
+            <div className="text-xs text-gray-500">Section</div>
+            <input className="w-full border px-2 py-1 rounded" value={'pricing'} readOnly />
+          </div>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <button disabled={saving} onClick={handleSaveBasePrice} className="px-3 py-1 text-dark border rounded">
+            {saving ? 'Saving...' : (basePriceKeyExists ? 'Save' : 'Create')}
+          </button>
+        </div>
+      </ComponentCard>
       <ComponentCard title="Slider Content" desc="Manage homepage slider dynamic content.">
         <div className="mb-4">
           <button onClick={handleCreateContent} className="px-4 py-2 bg-primary text-white rounded">Add Content</button>
@@ -122,8 +219,9 @@ export default function SliderContentPage() {
             <div key={item.id} className="p-4 border rounded-md">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
                 <div className="md:col-span-1">
-                  <div className="text-xs text-gray-500">Key</div>
-                  <div className="font-mono text-sm break-all">{item.key}</div>
+                  <div className="text-xs text-gray-500">Label</div>
+                  <div className="text-sm break-words">{humanizeKey(item.key)}</div>
+                  <div className="text-[10px] text-gray-500 mt-1">Key: <span className="font-mono">{item.key}</span></div>
                 </div>
                 <div className="md:col-span-2">
                   <div className="text-xs text-gray-500">Value</div>
