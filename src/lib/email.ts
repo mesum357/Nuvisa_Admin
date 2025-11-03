@@ -7,20 +7,38 @@ interface EmailOptions {
   text?: string;
 }
 
-const transporter = nodemailer.createTransport({
+// Get port and determine connection type
+const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+const useSSL = smtpPort === 465; // Port 465 uses SSL, port 587 uses STARTTLS
+
+// Create transporter configuration
+const transporterConfig: any = {
   host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
+  port: smtpPort,
+  secure: useSSL, // true for SSL (port 465), false for STARTTLS (port 587)
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-});
+  tls: {
+    // Do not fail on invalid certificates (some SMTP servers use self-signed certs)
+    rejectUnauthorized: false,
+  },
+};
+
+// Only add requireTLS for STARTTLS connections (port 587)
+if (!useSSL) {
+  transporterConfig.requireTLS = true;
+}
+
+const transporter = nodemailer.createTransport(transporterConfig);
 
 export async function sendEmail({ to, subject, html, text }: EmailOptions): Promise<boolean> {
   try {
+    const fromEmail = process.env.EMAIL_FROM || 'support@nuvisa.co.uk';
     await transporter.sendMail({
-      from: `Nuvisa Support <${process.env.EMAIL_FROM || 'support@nuvisa.co.uk'}>`,
+      from: `Nuvisa Support <${fromEmail}>`,
+      replyTo: fromEmail,
       to,
       subject,
       html,
