@@ -25,7 +25,17 @@ class ApiClient {
       if (!response.ok) {
         return {
           success: false,
-          error: data.error || 'An error occurred',
+          error: data.error || data.details || 'An error occurred',
+          details: data.details,
+        };
+      }
+
+      // Check if the response has a success field
+      if (data.success === false) {
+        return {
+          success: false,
+          error: data.error || data.details || 'Operation failed',
+          details: data.details,
         };
       }
 

@@ -34,18 +34,47 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     const body = await request.json();
     const { key, value, type = 'text', section, order = 0, isActive = true } = body;
 
-    const created = await prisma.sliderContent.create({
-      data: { key, value, type, section, order, isActive, updatedBy: session.user?.email || null },
+    if (!key || value === undefined) {
+      return NextResponse.json({ success: false, error: 'Key and value are required' }, { status: 400 });
+    }
+
+    // Use upsert to handle both create and update cases
+    const result = await prisma.sliderContent.upsert({
+      where: { key },
+      update: {
+        value,
+        type,
+        section,
+        order,
+        isActive,
+        updatedBy: session.user?.email || null,
+      },
+      create: {
+        key,
+        value,
+        type,
+        section,
+        order,
+        isActive,
+        updatedBy: session.user?.email || null,
+      },
     });
 
-    return NextResponse.json({ success: true, data: created });
-  } catch (_error) {
-    return NextResponse.json({ error: 'Failed to create slider content' }, { status: 500 });
+    return NextResponse.json({ success: true, data: result });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to create slider content', 
+      details: errorMessage 
+    }, { status: 500 });
   }
 }
 
