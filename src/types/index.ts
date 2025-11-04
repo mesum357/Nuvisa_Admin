@@ -191,6 +191,7 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   message?: string;
+  details?: string;
 }
 
 export interface PaginatedResponse<T> {
