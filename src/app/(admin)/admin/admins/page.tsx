@@ -29,6 +29,10 @@ export default function AdminsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [newAdmin, setNewAdmin] = useState<{ name: string; email: string; password: string; roleId?: string; isActive: boolean }>({ name: '', email: '', password: '', roleId: '', isActive: true });
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingAdminId, setEditingAdminId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; email: string; password: string }>({ name: '', email: '', password: '' });
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const fetchAdmins = useCallback(async () => {
     setLoading(true);
@@ -104,6 +108,47 @@ export default function AdminsPage() {
     }
   };
 
+  const startEditing = (admin: AdminRow) => {
+    setEditingAdminId(admin.id);
+    setEditForm({ name: admin.name, email: admin.email, password: '' });
+    setEditError(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingAdminId(null);
+    setEditForm({ name: '', email: '', password: '' });
+    setEditError(null);
+  };
+
+  const saveEdit = async (adminId: string) => {
+    if (!editForm.name.trim()) { setEditError('Name is required'); return; }
+    if (!editForm.email.trim()) { setEditError('Email is required'); return; }
+    setEditError(null);
+    setSaving(true);
+    const updateData: { name: string; email: string; password?: string } = {
+      name: editForm.name.trim(),
+      email: editForm.email.trim(),
+    };
+    // Only include password if it's provided
+    if (editForm.password.trim()) {
+      updateData.password = editForm.password;
+    }
+    const res = await apiClient.patch(`/admins/${adminId}`, updateData);
+    setSaving(false);
+    if (res.success) {
+      setEditingAdminId(null);
+      setEditForm({ name: '', email: '', password: '' });
+      fetchAdmins();
+      // Update session if editing own account
+      if ((session?.user as any)?.id === adminId) {
+        await updateSession();
+        router.refresh();
+      }
+    } else {
+      setEditError(res.error || 'Failed to update admin');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -141,45 +186,113 @@ export default function AdminsPage() {
               ) : rows.length === 0 ? (
                 <tr><td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">No admins found</td></tr>
               ) : (
-                rows.map((a) => (
-                  <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{a.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{a.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {a.role === 'SUPER_ADMIN' ? (
-                        <span className="text-gray-500 dark:text-gray-400">Super Admin</span>
-                      ) : (
-                        <select
-                          className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                          value={a.roleId || ''}
-                          onChange={(e) => assignRole(a.id, e.target.value || null)}
-                        >
-                          <option value="">— None —</option>
-                          {roles.map((r) => (
-                            <option key={r.id} value={r.id}>{r.name}</option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {a.isActive ? (
-                        <span className="text-green-600 dark:text-green-400">Active</span>
-                      ) : (
-                        <span className="text-red-600 dark:text-red-400">Disabled</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                      {a.role !== 'SUPER_ADMIN' && (
-                        <button onClick={() => toggleActive(a.id, !a.isActive)} className="text-brand-600 hover:text-brand-700">
-                          {a.isActive ? 'Disable' : 'Enable'}
-                        </button>
-                      )}
-                      {a.role === 'SUPER_ADMIN' && (
-                        <span className="text-gray-400 text-sm">Protected</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                rows.map((a) => {
+                  const isSuperAdmin = (session?.user as any)?.role === 'SUPER_ADMIN';
+                  const isOwnAccount = (session?.user as any)?.id === a.id;
+                  const canEdit = isSuperAdmin && isOwnAccount && a.role === 'SUPER_ADMIN';
+                  const isEditing = editingAdminId === a.id;
+
+                  return (
+                    <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.name}
+                            onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                            className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 w-full max-w-xs"
+                            disabled={saving}
+                          />
+                        ) : (
+                          a.name
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <input
+                              type="email"
+                              value={editForm.email}
+                              onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                              className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 w-full max-w-xs"
+                              disabled={saving}
+                              placeholder="Email"
+                            />
+                            <input
+                              type="password"
+                              value={editForm.password}
+                              onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
+                              className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 w-full max-w-xs"
+                              disabled={saving}
+                              placeholder="New Password (leave blank to keep current)"
+                            />
+                          </div>
+                        ) : (
+                          <span className="whitespace-nowrap">{a.email}</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {a.role === 'SUPER_ADMIN' ? (
+                          <span className="text-gray-500 dark:text-gray-400">Super Admin</span>
+                        ) : (
+                          <select
+                            className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            value={a.roleId || ''}
+                            onChange={(e) => assignRole(a.id, e.target.value || null)}
+                          >
+                            <option value="">— None —</option>
+                            {roles.map((r) => (
+                              <option key={r.id} value={r.id}>{r.name}</option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {a.isActive ? (
+                          <span className="text-green-600 dark:text-green-400">Active</span>
+                        ) : (
+                          <span className="text-red-600 dark:text-red-400">Disabled</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                        {isEditing ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => saveEdit(a.id)}
+                              disabled={saving}
+                              className="text-green-600 hover:text-green-700 disabled:opacity-50"
+                            >
+                              {saving ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              disabled={saving}
+                              className="text-gray-600 hover:text-gray-700 disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : canEdit ? (
+                          <button
+                            onClick={() => startEditing(a)}
+                            className="text-brand-600 hover:text-brand-700"
+                          >
+                            Edit
+                          </button>
+                        ) : a.role !== 'SUPER_ADMIN' ? (
+                          <button onClick={() => toggleActive(a.id, !a.isActive)} className="text-brand-600 hover:text-brand-700">
+                            {a.isActive ? 'Disable' : 'Enable'}
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-sm">Protected</span>
+                        )}
+                        {isEditing && editError && (
+                          <div className="mt-1 text-xs text-red-600 dark:text-red-400">{editError}</div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

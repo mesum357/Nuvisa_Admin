@@ -11,16 +11,12 @@ export default function EmailTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
-  const [logoUrl, setLogoUrl] = useState<string>('');
-  const [logoPreview, setLogoPreview] = useState<string>('');
-  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [socialLinks, setSocialLinks] = useState({ twitter: '', facebook: '', instagram: '', linkedin: '' });
   const [savingSocialLinks, setSavingSocialLinks] = useState(false);
   const [editingValues, setEditingValues] = useState<Record<string, { name: string; subject: string; body: string; description: string; isActive: boolean }>>({});
 
   useEffect(() => {
     fetchTemplates();
-    fetchLogo();
     fetchSocialLinks();
   }, []);
 
@@ -54,61 +50,6 @@ export default function EmailTemplatesPage() {
       alert('Failed to update social links');
     } finally {
       setSavingSocialLinks(false);
-    }
-  };
-
-  const fetchLogo = async () => {
-    try {
-      const response = await apiClient.get<{ logoUrl: string }>('/upload-logo');
-      if (response.success && response.data?.logoUrl) {
-        setLogoUrl(response.data.logoUrl);
-        setLogoPreview(response.data.logoUrl);
-      }
-    } catch (error) {
-      console.error('Error fetching logo:', error);
-    }
-  };
-
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
-      return;
-    }
-
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      alert('File size must be less than 2MB');
-      return;
-    }
-
-    setUploadingLogo(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/upload-logo', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (result.success && result.data?.logoUrl) {
-        setLogoUrl(result.data.logoUrl);
-        setLogoPreview(result.data.logoUrl);
-        alert('Logo uploaded successfully');
-      } else {
-        alert('Failed to upload logo');
-      }
-    } catch (error) {
-      console.error('Error uploading logo:', error);
-      alert('Failed to upload logo');
-    } finally {
-      setUploadingLogo(false);
     }
   };
 
@@ -216,64 +157,6 @@ export default function EmailTemplatesPage() {
           Add New Template
         </Button>
       </div>
-
-      {/* Logo Configuration Section */}
-      <ComponentCard title="Email Logo Configuration">
-        <div className="space-y-4">
-          <div className="flex items-start gap-6">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Upload Logo
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  disabled={uploadingLogo}
-                  className="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-50 file:text-blue-700
-                    hover:file:bg-blue-100
-                    dark:file:bg-gray-700 dark:file:text-gray-300
-                    cursor-pointer disabled:opacity-50"
-                />
-                {uploadingLogo && (
-                  <span className="text-sm text-gray-500">Uploading...</span>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Upload a logo image (PNG, JPG, or WebP). Max size: 2MB
-              </p>
-            </div>
-
-            {logoPreview && (
-              <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-800">
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Preview:</p>
-                <img 
-                  src={logoPreview} 
-                  alt="Logo Preview" 
-                  className="max-h-20 max-w-32 object-contain"
-                  onError={() => setLogoPreview('')}
-                />
-              </div>
-            )}
-          </div>
-
-          {logoUrl && (
-            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Current Logo URL:
-              </p>
-              <code className="text-xs text-gray-600 dark:text-gray-400 break-all">
-                {logoUrl}
-              </code>
-            </div>
-          )}
-        </div>
-      </ComponentCard>
 
       <ComponentCard title="Social Media Links Configuration">
         <div className="space-y-4">
@@ -534,15 +417,7 @@ export default function EmailTemplatesPage() {
               <div className="bg-white border border-gray-300 rounded-lg shadow-inner max-w-2xl mx-auto">
                  {/* Logo */}
                  <div className="text-center pt-10 pb-6">
-                   {logoPreview ? (
-                     <img 
-                       src={logoPreview} 
-                       alt="NUvisa" 
-                       className="max-h-12 mx-auto object-contain"
-                     />
-                   ) : (
-                     <h1 className="text-3xl font-bold text-black">NUvisa</h1>
-                   )}
+                   <h1 className="text-3xl font-bold text-black">NUvisa</h1>
                  </div>
                 
                 {/* Email Content */}
@@ -582,15 +457,7 @@ export default function EmailTemplatesPage() {
                 
                 {/* Bottom Logo */}
                 <div className="px-10 py-6 border-t border-gray-300 text-center">
-                  {logoPreview ? (
-                    <img 
-                      src={logoPreview} 
-                      alt="NUvisa" 
-                      className="max-h-10 mx-auto opacity-70"
-                    />
-                  ) : (
-                    <h2 className="text-sm font-normal text-gray-600">NUvisa</h2>
-                  )}
+                  <h2 className="text-sm font-normal text-gray-600">NUvisa</h2>
                 </div>
               </div>
             </div>
