@@ -9,14 +9,17 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options?: RequestInit
+    options?: RequestInit,
+    isFormData?: boolean
   ): Promise<ApiResponse<T>> {
     try {
+      const headers: HeadersInit = {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...options?.headers,
+      };
+
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
+        headers,
         ...options,
       });
 
@@ -58,11 +61,13 @@ class ApiClient {
     });
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+  async post<T>(endpoint: string, data?: any, options?: RequestInit): Promise<ApiResponse<T>> {
+    const isFormData = data instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: JSON.stringify(data),
-    });
+      body: isFormData ? data : JSON.stringify(data),
+      ...options,
+    }, isFormData);
   }
 
   async put<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {

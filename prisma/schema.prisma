@@ -231,6 +231,7 @@ model AppointmentText {
   appointmentText String  @default("Appointment in 10 days or less")
   sectionTitle   String   @default("Choose Your Country")
   sectionDescription String @default("We support 20 countries over all the visa centres in the UK")
+  image          String?  // Path to country image
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   updatedBy      String?

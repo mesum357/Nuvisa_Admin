@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     console.log('Prisma client keys:', Object.keys(prisma));
 
     const data = await request.json();
-    const { countryName, appointmentText, sectionTitle, sectionDescription } = data;
+    const { countryName, appointmentText, sectionTitle, sectionDescription, image } = data;
 
     if (!countryName || !appointmentText) {
       return NextResponse.json(
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert appointment text with section content
-    console.log('Attempting to upsert appointment text:', { countryName, appointmentText, sectionTitle, sectionDescription });
+    console.log('Attempting to upsert appointment text:', { countryName, appointmentText, sectionTitle, sectionDescription, image });
     
     const updateData: any = {
       appointmentText: appointmentText.trim(),
@@ -119,6 +119,7 @@ export async function POST(request: NextRequest) {
     // Only update section content if provided
     if (sectionTitle !== undefined) updateData.sectionTitle = sectionTitle.trim();
     if (sectionDescription !== undefined) updateData.sectionDescription = sectionDescription.trim();
+    if (image !== undefined) updateData.image = image?.trim() || null;
     
     const result = await prisma.appointmentText.upsert({
       where: { countryName },
@@ -128,6 +129,7 @@ export async function POST(request: NextRequest) {
         appointmentText: appointmentText.trim(),
         sectionTitle: sectionTitle?.trim() || "Choose Your Country",
         sectionDescription: sectionDescription?.trim() || "We support 20 countries over all the visa centres in the UK",
+        image: image?.trim() || null,
         updatedBy: (session.user as any).id,
       },
     });

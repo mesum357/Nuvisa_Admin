@@ -10,12 +10,13 @@ type AppointmentText = {
   appointmentText: string;
   sectionTitle: string;
   sectionDescription: string;
+  image?: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
-// Static list of countries from the frontend
-const STATIC_COUNTRIES = [
+// All countries from the frontend (18 countries)
+const ALL_COUNTRIES = [
   "Germany",
   "Netherlands", 
   "Belgium",
@@ -27,7 +28,13 @@ const STATIC_COUNTRIES = [
   "Portugal",
   "Iceland",
   "Poland",
-  "NORWAY"
+  "NORWAY",
+  "Switzerland",
+  "Spain",
+  "Malta",
+  "Luxembourg",
+  "Greece",
+  "Finland"
 ];
 
 export default function AppointmentTextPage() {
@@ -36,11 +43,20 @@ export default function AppointmentTextPage() {
   const [saving, setSaving] = useState<boolean>(false);
   const [editingCountry, setEditingCountry] = useState<string | null>(null);
   const [formData, setFormData] = useState<{ [key: string]: string }>({});
+  const [imageData, setImageData] = useState<{ [key: string]: string | null }>({});
   const [sectionContent, setSectionContent] = useState({
     title: "Choose Your Country",
     description: "We support 20 countries over all the visa centres in the UK"
   });
   const [editingSection, setEditingSection] = useState<boolean>(false);
+  const [showAddCountry, setShowAddCountry] = useState<boolean>(false);
+  const [newCountry, setNewCountry] = useState({
+    name: "",
+    appointmentText: "Appointment in 10 days or less",
+    image: null as File | null,
+    imagePreview: null as string | null,
+  });
+  const [uploadingImage, setUploadingImage] = useState<boolean>(false);
 
   const fetchAppointmentTexts = async () => {
     setLoading(true);
@@ -51,10 +67,13 @@ export default function AppointmentTextPage() {
         
         // Initialize form data with existing values
         const initialFormData: { [key: string]: string } = {};
+        const initialImageData: { [key: string]: string | null } = {};
         res.data.forEach(item => {
           initialFormData[item.countryName] = item.appointmentText;
+          initialImageData[item.countryName] = item.image || null;
         });
         setFormData(initialFormData);
+        setImageData(initialImageData);
         
         // Get section content from first record (all should have same section content)
         if (res.data.length > 0) {
@@ -87,6 +106,7 @@ export default function AppointmentTextPage() {
       await apiClient.post("/appointment-text", {
         countryName,
         appointmentText,
+        image: imageData[countryName] || null,
       });
       
       await fetchAppointmentTexts();
@@ -94,6 +114,84 @@ export default function AppointmentTextPage() {
     } catch (error) {
       console.error("Failed to save appointment text:", error);
       alert("Failed to save appointment text");
+    }
+    setSaving(false);
+  };
+
+  const handleImageUpload = async (countryName: string, file: File) => {
+    setUploadingImage(true);
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('countryName', countryName);
+
+      const res = await apiClient.post<{ imagePath: string }>("/upload-country-image", uploadFormData);
+
+      if (res?.success && res.data) {
+        const imagePath = res.data.imagePath;
+        setImageData(prev => ({ ...prev, [countryName]: imagePath }));
+        // Also update the appointment text record with the image
+        await apiClient.post("/appointment-text", {
+          countryName,
+          appointmentText: formData[countryName] || getAppointmentTextForCountry(countryName),
+          image: imagePath,
+        });
+        await fetchAppointmentTexts();
+      }
+    } catch (error) {
+      console.error("Failed to upload image:", error);
+      alert("Failed to upload image");
+    }
+    setUploadingImage(false);
+  };
+
+  const handleAddCountry = async () => {
+    if (!newCountry.name.trim()) {
+      alert("Country name is required");
+      return;
+    }
+
+    if (!newCountry.appointmentText.trim()) {
+      alert("Appointment text is required");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      let imagePath = null;
+      
+      // Upload image if provided
+      if (newCountry.image) {
+        const formData = new FormData();
+        formData.append('file', newCountry.image);
+        formData.append('countryName', newCountry.name);
+
+        const uploadRes = await apiClient.post<{ imagePath: string }>("/upload-country-image", formData);
+
+        if (uploadRes?.success && uploadRes.data?.imagePath) {
+          imagePath = uploadRes.data.imagePath;
+        }
+      }
+
+      // Create the appointment text record
+      await apiClient.post("/appointment-text", {
+        countryName: newCountry.name.trim(),
+        appointmentText: newCountry.appointmentText.trim(),
+        image: imagePath,
+      });
+      
+      await fetchAppointmentTexts();
+      setShowAddCountry(false);
+      setNewCountry({
+        name: "",
+        appointmentText: "Appointment in 10 days or less",
+        image: null,
+        imagePreview: null,
+      });
+      alert("Country added successfully!");
+    } catch (error: any) {
+      console.error("Failed to add country:", error);
+      alert(error?.response?.data?.error || "Failed to add country");
     }
     setSaving(false);
   };
@@ -119,8 +217,20 @@ export default function AppointmentTextPage() {
     return existing ? existing.appointmentText : "Appointment in 10 days or less";
   };
 
+  const getImageForCountry = (countryName: string): string | null => {
+    const existing = appointmentTexts.find(item => item.countryName === countryName);
+    return existing?.image || imageData[countryName] || null;
+  };
+
   const hasCustomText = (countryName: string): boolean => {
     return appointmentTexts.some(item => item.countryName === countryName);
+  };
+
+  // Get all countries - merge database records with frontend list
+  const getAllCountries = (): string[] => {
+    const dbCountries = appointmentTexts.map(item => item.countryName);
+    const allCountriesSet = new Set([...ALL_COUNTRIES, ...dbCountries]);
+    return Array.from(allCountriesSet).sort();
   };
 
   const handleSaveSectionContent = async () => {
@@ -238,14 +348,119 @@ export default function AppointmentTextPage() {
 
       {/* Countries Management */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Country Appointment Texts</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Country Appointment Texts</h2>
+          <Button 
+            onClick={() => setShowAddCountry(true)} 
+            disabled={saving || showAddCountry}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            + Add Country
+          </Button>
+        </div>
+
+        {showAddCountry && (
+          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-4">Add New Country</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Country Name *
+                </label>
+                <input
+                  type="text"
+                  value={newCountry.name}
+                  onChange={(e) => setNewCountry({ ...newCountry, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter country name"
+                  disabled={saving}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Appointment Text *
+                </label>
+                <textarea
+                  value={newCountry.appointmentText}
+                  onChange={(e) => setNewCountry({ ...newCountry, appointmentText: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter appointment text"
+                  disabled={saving}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Country Image
+                </label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setNewCountry({
+                          ...newCountry,
+                          image: file,
+                          imagePreview: URL.createObjectURL(file),
+                        });
+                      }
+                    }}
+                    className="block w-full text-sm text-gray-500 dark:text-gray-400
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-md file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-blue-50 file:text-blue-700
+                      hover:file:bg-blue-100
+                      dark:file:bg-blue-900 dark:file:text-blue-200"
+                    disabled={saving || uploadingImage}
+                  />
+                  {newCountry.imagePreview && (
+                    <img
+                      src={newCountry.imagePreview}
+                      alt="Preview"
+                      className="w-20 h-20 object-cover rounded-md"
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <Button 
+                  onClick={handleAddCountry} 
+                  disabled={saving || uploadingImage}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {saving ? 'Adding...' : 'Add Country'}
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setShowAddCountry(false);
+                    setNewCountry({
+                      name: "",
+                      appointmentText: "Appointment in 10 days or less",
+                      image: null,
+                      imagePreview: null,
+                    });
+                  }} 
+                  disabled={saving}
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="animate-pulse text-gray-500 dark:text-gray-400">Loading appointment texts...</div>
         ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {STATIC_COUNTRIES.map((countryName) => {
+          {getAllCountries().map((countryName) => {
             const isEditing = editingCountry === countryName;
             const currentText = getAppointmentTextForCountry(countryName);
+            const countryImage = getImageForCountry(countryName);
             const hasCustom = hasCustomText(countryName);
 
             return (
@@ -266,6 +481,16 @@ export default function AppointmentTextPage() {
                   )}
                 </div>
 
+                {countryImage && (
+                  <div className="w-full h-32 rounded-md overflow-hidden">
+                    <img
+                      src={countryImage}
+                      alt={countryName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+
                 {isEditing ? (
                   <div className="space-y-2">
                     <textarea
@@ -275,11 +500,34 @@ export default function AppointmentTextPage() {
                       rows={3}
                       placeholder="Enter appointment text..."
                     />
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Country Image
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleImageUpload(countryName, file);
+                          }
+                        }}
+                        className="block w-full text-xs text-gray-500 dark:text-gray-400
+                          file:mr-2 file:py-1 file:px-2
+                          file:rounded file:border-0
+                          file:text-xs file:font-semibold
+                          file:bg-blue-50 file:text-blue-700
+                          hover:file:bg-blue-100
+                          dark:file:bg-blue-900 dark:file:text-blue-200"
+                        disabled={saving || uploadingImage}
+                      />
+                    </div>
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
                         onClick={() => handleSave(countryName)} 
-                        disabled={saving}
+                        disabled={saving || uploadingImage}
                       >
                         Save
                       </Button>
