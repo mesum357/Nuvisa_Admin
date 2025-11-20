@@ -12,7 +12,6 @@ export default function EmailTemplatesPage() {
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
   const [socialLinks, setSocialLinks] = useState({ twitter: '', facebook: '', instagram: '', linkedin: '' });
-  const [savingSocialLinks, setSavingSocialLinks] = useState(false);
   const [footerSettings, setFooterSettings] = useState({
     logoUrl: '/image/logo.png',
     teamSignature: '— Team NUvisa',
@@ -28,54 +27,46 @@ export default function EmailTemplatesPage() {
 
   useEffect(() => {
     fetchTemplates();
-    fetchSocialLinks();
     fetchFooterSettings();
   }, []);
 
   const fetchSocialLinks = async () => {
-    try {
-      const response = await apiClient.get<{twitter: string; facebook: string; instagram: string; linkedin: string}>('/social-links');
-      if (response.success && response.data) {
-        setSocialLinks({
-          twitter: response.data.twitter || '',
-          facebook: response.data.facebook || '',
-          instagram: response.data.instagram || '',
-          linkedin: response.data.linkedin || ''
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching social links:', error);
-    }
+    // Social links are now fetched as part of footer settings
+    // This function is kept for backward compatibility but does nothing
   };
 
   const fetchFooterSettings = async () => {
     try {
       const response = await apiClient.get<{
-        logoUrl: string;
-        teamSignature: string;
-        companyInfo: string[];
-        twitter: string;
-        facebook: string;
-        instagram: string;
-        linkedin: string;
+        results: {
+          logoUrl: string;
+          teamSignature: string;
+          companyInfo: string[];
+          twitter: string;
+          facebook: string;
+          instagram: string;
+          linkedin: string;
+        };
+        recordsCount: number;
       }>('/orders/email-footer-settings');
-      if (response.success && response.data) {
-        const companyInfo = response.data.companyInfo || ['If you have any questions, please visit our Help Centre.'];
+      if (response.success && response.data?.results) {
+        const results = response.data.results;
+        const companyInfo = results.companyInfo || ['If you have any questions, please visit our Help Centre.'];
         const companyInfoTextValue = Array.isArray(companyInfo) && companyInfo.length > 0 
           ? companyInfo.join('\n') 
           : 'If you have any questions, please visit our Help Centre.';
         
         setFooterSettings({
-          logoUrl: response.data.logoUrl || '/image/logo.png',
-          teamSignature: response.data.teamSignature || '— Team NUvisa',
+          logoUrl: results.logoUrl || '/image/logo.png',
+          teamSignature: results.teamSignature || '— Team NUvisa',
           companyInfo: companyInfo,
         });
         setCompanyInfoText(companyInfoTextValue);
         setSocialLinks({
-          twitter: response.data.twitter || '',
-          facebook: response.data.facebook || '',
-          instagram: response.data.instagram || '',
-          linkedin: response.data.linkedin || ''
+          twitter: results.twitter || '',
+          facebook: results.facebook || '',
+          instagram: results.instagram || '',
+          linkedin: results.linkedin || ''
         });
       } else {
         // Set default values if API call fails
@@ -95,21 +86,6 @@ export default function EmailTemplatesPage() {
     setTimeout(() => setNotification(null), 5000);
   };
 
-  const handleSaveSocialLinks = async () => {
-    setSavingSocialLinks(true);
-    try {
-      const response = await apiClient.post('/social-links', socialLinks);
-      if (response.success) {
-        showNotification('success', 'Social links updated successfully');
-      } else {
-        showNotification('error', 'Failed to update social links');
-      }
-    } catch (error) {
-      showNotification('error', 'Failed to update social links');
-    } finally {
-      setSavingSocialLinks(false);
-    }
-  };
 
   const handleSaveFooterSettings = async () => {
     setSavingFooter(true);
@@ -119,24 +95,28 @@ export default function EmailTemplatesPage() {
         .map(line => line.trim())
         .filter(line => line.length > 0);
 
-      const response = await apiClient.patch('/orders/email-footer-settings', {
-        logoUrl: footerSettings.logoUrl,
-        teamSignature: footerSettings.teamSignature,
+      const payload = {
+        logoUrl: footerSettings.logoUrl || '/image/logo.png',
+        teamSignature: footerSettings.teamSignature || '— Team NUvisa',
         companyInfo: companyInfoArray.length > 0 ? companyInfoArray : ['If you have any questions, please visit our Help Centre.'],
-        twitter: socialLinks.twitter,
-        facebook: socialLinks.facebook,
-        instagram: socialLinks.instagram,
-        linkedin: socialLinks.linkedin,
-      });
+        twitter: socialLinks.twitter || '#',
+        facebook: socialLinks.facebook || '#',
+        instagram: socialLinks.instagram || '#',
+        linkedin: socialLinks.linkedin || '#',
+      };
+
+      const response = await apiClient.patch('/orders/email-footer-settings', payload);
 
       if (response.success) {
         showNotification('success', 'Email footer settings updated successfully');
+        // Refresh footer settings to get the latest values
         await fetchFooterSettings();
       } else {
-        showNotification('error', 'Failed to update footer settings');
+        showNotification('error', response.error || 'Failed to update footer settings');
       }
-    } catch (error) {
-      showNotification('error', 'Failed to update footer settings');
+    } catch (error: any) {
+      console.error('Error saving footer settings:', error);
+      showNotification('error', error.message || 'Failed to update footer settings');
     } finally {
       setSavingFooter(false);
     }
