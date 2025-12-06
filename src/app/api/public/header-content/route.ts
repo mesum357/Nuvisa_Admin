@@ -29,9 +29,16 @@ export async function GET(request: NextRequest) {
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     return response;
-  } catch (_error) {
+  } catch (error) {
+    // Log the actual error for debugging
+    console.error('Error fetching header content:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
     const response = NextResponse.json(
-      { error: 'Failed to fetch header content' },
+      { 
+        error: 'Failed to fetch header content',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+      },
       { status: 500 }
     );
     

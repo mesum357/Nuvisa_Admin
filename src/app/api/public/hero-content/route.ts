@@ -29,9 +29,16 @@ export async function GET(request: NextRequest) {
         'Access-Control-Allow-Headers': 'Content-Type',
       },
     });
-  } catch (_error) {
+  } catch (error) {
+    // Log the actual error for debugging
+    console.error('Error fetching hero content:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
     return NextResponse.json(
-      { error: 'Failed to fetch hero content' },
+      { 
+        error: 'Failed to fetch hero content',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+      },
       { 
         status: 500,
         headers: {

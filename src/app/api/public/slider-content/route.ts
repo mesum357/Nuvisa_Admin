@@ -28,9 +28,16 @@ export async function GET(request: NextRequest) {
         },
       }
     );
-  } catch (_error) {
+  } catch (error) {
+    // Log the actual error for debugging
+    console.error('Error fetching slider content:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
     return NextResponse.json(
-      { error: 'Failed to fetch slider content' },
+      { 
+        error: 'Failed to fetch slider content',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+      },
       {
         status: 500,
         headers: {

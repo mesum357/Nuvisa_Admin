@@ -37,7 +37,7 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions): Prom
   try {
     const fromEmail = process.env.EMAIL_FROM || 'support@nuvisa.co.uk';
     await transporter.sendMail({
-      from: `Nuvisa Support <${fromEmail}>`,
+      from: `NUvisa Support <${fromEmail}>`,
       replyTo: fromEmail,
       to,
       subject,
