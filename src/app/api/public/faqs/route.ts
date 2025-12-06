@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import prisma, { retryWithBackoff } from '@/lib/prisma';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,19 +20,22 @@ export async function GET(request: NextRequest) {
       where.category = category;
     }
 
-    const faqs = await prisma.fAQ.findMany({
-      where,
-      orderBy: [
-        { order: 'asc' },
-        { createdAt: 'desc' },
-      ],
-      select: {
-        id: true,
-        question: true,
-        answer: true,
-        category: true,
-        order: true,
-      },
+    // Use retry logic to handle connection issues
+    const faqs = await retryWithBackoff(async () => {
+      return await prisma.fAQ.findMany({
+        where,
+        orderBy: [
+          { order: 'asc' },
+          { createdAt: 'desc' },
+        ],
+        select: {
+          id: true,
+          question: true,
+          answer: true,
+          category: true,
+          order: true,
+        },
+      });
     });
 
     const response = NextResponse.json({
@@ -35,29 +44,43 @@ export async function GET(request: NextRequest) {
     });
 
     // Add CORS headers
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
 
     return response;
-  } catch (error) {
-    // Log the actual error for debugging
-    console.error('Error fetching FAQs:', error);
+  } catch (error: any) {
+    // Enhanced error logging with more details
+    console.error('Error fetching FAQs:', {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta,
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+    });
+    
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const isConnectionError = 
+      error?.code === 'P1001' || // Can't reach database server
+      error?.code === 'P1002' || // Database server closed the connection
+      error?.code === 'P1008' || // Operations timed out
+      error?.code === 'P1017' || // Server has closed the connection
+      error?.message?.toLowerCase().includes('timeout') ||
+      error?.message?.toLowerCase().includes('connection');
     
     const response = NextResponse.json(
       { 
         error: 'Failed to fetch FAQs',
         details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        retryable: isConnectionError,
       },
       { status: 500 }
     );
-
+    
     // Add CORS headers to error response too
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+    
     return response;
   }
 }
