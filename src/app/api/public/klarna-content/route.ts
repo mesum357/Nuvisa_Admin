@@ -16,7 +16,8 @@ export async function GET(request: NextRequest) {
     const where: any = { isActive: true }; // Only fetch active content for public API
     if (section) where.section = section;
 
-    // Use retry logic to handle connection issues
+    // Use retry logic to handle connection issues with automatic reconnection
+    // The retry logic will automatically reconnect on P1001, P1002, P1008, P1017 errors
     const contents = await retryWithBackoff(async () => {
       return await prisma.klarnaContent.findMany({
         where,
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
           { key: 'asc' }
         ],
       });
-    });
+    }, 3, 200); // 3 retries with 200ms initial delay (exponential backoff)
 
     return NextResponse.json({
       success: true,
