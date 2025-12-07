@@ -1,6 +1,7 @@
 # Nuvisa Admin System
 
 
+
 A comprehensive admin dashboard system built with Next.js 15, Prisma, and Supabase for managing applications, users, and website content.
 
 
