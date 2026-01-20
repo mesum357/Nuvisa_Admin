@@ -96,7 +96,17 @@ const baseNavItems: NavItem[] = [
     icon: <PageIcon />,
     name: "Email Templates",
     path: "/admin/email-templates",
-  }
+  },
+  {
+    icon: <UserCircleIcon />,
+    name: "Popup Submissions",
+    path: "/admin/popup-submissions",
+  },
+  {
+    icon: <UserCircleIcon />,
+    name: "Popup Content",
+    path: "/admin/popup-content",
+  },
 ];
 
 const othersItems: NavItem[] = [];
@@ -124,6 +134,8 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/hero-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/email-templates')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/roles')) return can('roles', 'read');
+      if (item.path.startsWith('/admin/popup-submissions')) return can('users', 'read');
+      if (item.path.startsWith('/admin/popup-content')) return can('users', 'read');
       return true;
     });
   }, [can]);
