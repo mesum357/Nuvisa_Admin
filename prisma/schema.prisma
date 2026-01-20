@@ -380,3 +380,50 @@ model EmailTemplate {
   @@map("email_templates")
 }
 
+model userAccount {
+  id               String   @id @default(uuid())
+  phone            String   @unique
+  uk_status        String?
+  schengen_refused String?
+  journey_purpose  String?
+  dynamicAnswers   Json?
+  joined           DateTime @default(now())
+
+  @@map("user_accounts") 
+}
+
+enum QuestionType {
+  TEXT
+  OPTIONS
+}
+
+model PopupQuestion {
+  id             String       @id @default(uuid())
+  text           String
+  type           QuestionType
+  options        String[]
+  order          Int          @default(0)
+  popupContentId String
+  popupContent   PopupContent @relation(fields: [popupContentId], references: [id], onDelete: Cascade)
+
+  @@map("popup_questions")
+}
+
+model PopupContent {
+  id                     String   @id @default("current")
+  mainHeading            String   @default("❤️ NEW CUSTOMER OFFER - £129 fee for your first visa")
+  subHeading             String   @default("Auto-booking appointment")
+  offerPrice             String   @default("£129")
+  originalPrice          String   @default("£100")
+  continueButtonText     String   @default("Continue")
+  lastQuestionButtonText String   @default("Check Required Documents")
+  imageUrl               String   @default("/image/popupnew.png")
+  conciergeTitle         String   @default("Concierge Assistance")
+  conciergePrice         String   @default("£35")
+  conciergeOfferPrice    String   @default("Free")
+  lastChanceText         String   @default("Last chance (ends soon) Until Jan 2026!")
+  updatedAt              DateTime @updatedAt
+  questions              PopupQuestion[]
+
+  @@map("popup_content")
+}
