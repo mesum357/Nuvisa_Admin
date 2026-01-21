@@ -2,12 +2,13 @@
 
 import React, { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/components/ui/button/Button';
 import { EnvelopeIcon, LockIcon, EyeIcon, EyeCloseIcon } from '@/icons';
 
 export default function SignInFormAdmin() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -22,16 +23,19 @@ export default function SignInFormAdmin() {
     setLoading(true);
 
     try {
+      const callbackUrl = searchParams.get('callbackUrl') || '/';
       const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
+        callbackUrl,
         redirect: false,
       });
 
       if (result?.error) {
         setError('Invalid email or password');
       } else {
-        router.push('/');
+        // If NextAuth returns a URL, prefer it (it will include callbackUrl)
+        router.push(result?.url || callbackUrl);
         router.refresh();
       }
     } catch {
