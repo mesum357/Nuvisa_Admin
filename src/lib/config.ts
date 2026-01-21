@@ -35,7 +35,10 @@ export const BACKEND_CONFIG = {
  * Get the full URL for a backend endpoint
  */
 export function getBackendUrl(endpoint: string): string {
-  return `${BACKEND_CONFIG.BASE_URL}${endpoint}`;
+  // Normalize to avoid double slashes when BASE_URL has trailing slash
+  const base = BACKEND_CONFIG.BASE_URL.replace(/\/+$/, '');
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${base}${path}`;
 }
 
 /**
