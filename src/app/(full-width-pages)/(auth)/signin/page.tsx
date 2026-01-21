@@ -2,6 +2,7 @@ import SignInFormAdmin from "@/components/auth/SignInFormAdmin";
 import { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Admin Sign In | Nuvisa Admin System",
@@ -38,7 +39,9 @@ export default function SignIn() {
             Welcome back! Please sign in to your admin account.
           </p>
         </div>
-        <SignInFormAdmin />
+        <Suspense fallback={null}>
+          <SignInFormAdmin />
+        </Suspense>
       </div>
     </div>
   );
