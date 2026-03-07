@@ -62,6 +62,34 @@ export async function seedHeroContent() {
       },
     });
 
+        // Hero title
+    await prisma.heroContent.upsert({
+      where: { key: 'hero_discount_ticket_text' },
+      update: {},
+      create: {
+        key: 'hero_discount_ticket_text',
+        value: "Students! Get 10% Off",
+        type: 'text',
+        section: 'cta',
+        isActive: true,
+        order: 5,
+      },
+    });
+
+        // Hero title
+    await prisma.heroContent.upsert({
+      where: { key: 'hero_discount_ticket_link' },
+      update: {},
+      create: {
+        key: 'hero_discount_ticket_link',
+        value: "/get-the-visa",
+        type: 'url',
+        section: 'cta',
+        isActive: true,
+        order: 5,
+      },
+    });
+
     console.log('✅ Hero content seeded successfully!');
   } catch (error) {
     console.error('❌ Error seeding hero content:', error);

@@ -78,6 +78,10 @@ export function getStatusColor(status: string): string {
   return statusColors[normalizedStatus] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
 }
 
+export function formatStatusForEmail(status?: string): string {
+  return (status || '').replace(/_/g, ' ').toUpperCase();
+}
+
 export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
@@ -265,4 +269,3 @@ export function calculatePercentageChange(current: number, previous: number): nu
   if (previous === 0) return current > 0 ? 100 : 0;
   return ((current - previous) / previous) * 100;
 }
-

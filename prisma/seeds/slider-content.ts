@@ -21,6 +21,8 @@ export async function seedSliderContent() {
     { key: 'slot2_status', value: 'Last few left!', type: 'text', section: 'slider', order: 4 },
     { key: 'slot3_label', value: 'November slots', type: 'text', section: 'slider', order: 5 },
     { key: 'slot3_status', value: '65% reserved', type: 'text', section: 'slider', order: 6 },
+    { key: 'slots_left', value: '12', type: 'number', section: 'slider', order: 7 },
+    { key: 'appointment_reason', value: 'Priority appointment notice', type: 'text', section: 'slider', order: 8 },
   ];
 
   for (const item of data) {
@@ -31,5 +33,3 @@ export async function seedSliderContent() {
     });
   }
 }
-
-

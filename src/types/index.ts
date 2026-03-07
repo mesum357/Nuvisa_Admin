@@ -259,6 +259,31 @@ export interface UpdateFAQData {
   isActive?: boolean;
 }
 
+export interface VisaPricing {
+  id: string;
+  name: string;
+  basePrice: number;
+  strikeOutPrice: number;
+  reason?: string | null;
+  showReason?: boolean;
+}
+
+export interface CreateVisaPricingData {
+  name: string;
+  basePrice: number;
+  strikeOutPrice: number;
+  reason?: string;
+  showReason?: boolean;
+}
+
+export interface UpdateVisaPricingData {
+  name?: string;
+  basePrice?: number;
+  strikeOutPrice?: number;
+  reason?: string;
+  showReason?: boolean;
+}
+
 export interface ComparisonSection {
   id: string;
   title: string;
@@ -295,4 +320,3 @@ export interface UpdateComparisonSectionData {
   rightSideItems?: string[];
   isActive?: boolean;
 }
-

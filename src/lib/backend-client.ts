@@ -126,6 +126,24 @@ export const backendPatch = async (path: string, body?: any, requesterEmail?: st
   return { ok: res.ok, status: res.status, data };
 };
 
+export const backendDelete = async (path: string, _requesterEmail?: string) => {
+  const url = getBackendUrl(path);
+  const headers = getBackendHeaders();
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers,
+    cache: 'no-store',
+    mode: 'cors',
+    credentials: 'include'
+  });
+  let data: any = null;
+  try {
+    const text = await res.text();
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, status: res.status, data };
+};
+
 export default { backendGet };
-
-
