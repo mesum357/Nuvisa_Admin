@@ -64,6 +64,11 @@ const baseNavItems: NavItem[] = [
   },
   {
     icon: <PageIcon />,
+    name: "Visa Pricing",
+    path: "/admin/visa-pricing",
+  },
+  {
+    icon: <PageIcon />,
     name: "Header Content",
     path: "/admin/header-content",
   },
@@ -126,6 +131,7 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/appointment-text')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/faqs')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/comparison-section')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/visa-pricing')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/header-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/footer-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/slider-content')) return can('siteContent', 'read');
