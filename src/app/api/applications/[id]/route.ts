@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { backendGet, backendPatch } from '@/lib/backend-client';
 import { sendEmail, getApplicationStatusEmailTemplate } from '@/lib/email';
+import { formatStatusForEmail } from '@/lib/utils';
 
 export async function GET(
   request: NextRequest,
@@ -93,7 +94,7 @@ export async function PATCH(
 
     const { id } = await params;
     const data = await request.json();
-    const { status, sendNotification, ...updateData } = data;
+    const { status, sendNotification, oldStatus, statusDisplay, ...updateData } = data;
 
     // Map frontend status to backend status format
     const mapStatusToBackend = (frontendStatus: string) => {
@@ -109,12 +110,30 @@ export async function PATCH(
       return statusMap[frontendStatus] || frontendStatus.toLowerCase();
     };
 
+    const formattedOldStatus = formatStatusForEmail(String(oldStatus || ''));
+    const formattedStatus = formatStatusForEmail(String(statusDisplay || status || ''));
+
     // ALWAYS try to update the backend first (visa_applications table)
     const backendStatus = status ? mapStatusToBackend(status) : undefined;
     try {
+      const backendPayload: Record<string, unknown> = {
+        status: backendStatus,
+        note: updateData.note,
+        sendNotification,
+      };
+
+      // Pass display-friendly values for email templates expecting old/new status text.
+      if (formattedOldStatus) {
+        backendPayload.oldStatus = formattedOldStatus;
+      }
+      if (formattedStatus) {
+        backendPayload.statusDisplay = formattedStatus;
+        backendPayload.newStatus = formattedStatus;
+      }
+
       const be = await backendPatch(
         `/orders/application/${id}/status`, 
-        { status: backendStatus, note: updateData.note, sendNotification }, 
+        backendPayload, 
         (session.user as { email?: string })?.email
       );
       if (be.ok) {
@@ -248,4 +267,3 @@ export async function DELETE(
     );
   }
 }
-

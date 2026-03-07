@@ -27,6 +27,10 @@ export default function SliderContentPage() {
   const [basePriceKeyExists, setBasePriceKeyExists] = useState<boolean>(false);
   const [strikeOutPriceGbp, setStrikeOutPriceGbp] = useState<string>("");
   const [strikeOutPriceKeyExists, setStrikeOutPriceKeyExists] = useState<boolean>(false);
+  const [slotsLeft, setSlotsLeft] = useState<string>("");
+  const [slotsLeftKeyExists, setSlotsLeftKeyExists] = useState<boolean>(false);
+  const [appointmentReason, setAppointmentReason] = useState<string>("");
+  const [appointmentReasonKeyExists, setAppointmentReasonKeyExists] = useState<boolean>(false);
 
   const humanizeKey = (key: string) => {
     if (!key) return '';
@@ -104,6 +108,35 @@ export default function SliderContentPage() {
       } else {
         setStrikeOutPriceGbp("");
         setStrikeOutPriceKeyExists(false);
+      }
+
+      // Initialize dedicated slots left field from known keys if present
+      const slotsLeftKeyOrder = [
+        'slots_left',
+        'slot_left',
+      ];
+      let foundSlotsLeftKey: string | null = null;
+      for (const k of slotsLeftKeyOrder) {
+        if (values[k] !== undefined) {
+          foundSlotsLeftKey = k;
+          break;
+        }
+      }
+      if (foundSlotsLeftKey) {
+        setSlotsLeft(values[foundSlotsLeftKey] || "");
+        setSlotsLeftKeyExists(foundSlotsLeftKey === 'slots_left');
+      } else {
+        setSlotsLeft("");
+        setSlotsLeftKeyExists(false);
+      }
+
+      // Initialize dedicated appointment reason field
+      if (values['appointment_reason'] !== undefined) {
+        setAppointmentReason(values['appointment_reason'] || "");
+        setAppointmentReasonKeyExists(true);
+      } else {
+        setAppointmentReason("");
+        setAppointmentReasonKeyExists(false);
       }
     }
     setLoading(false);
@@ -257,6 +290,95 @@ export default function SliderContentPage() {
     }
   };
 
+  const handleSaveSlotsLeft = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    const trimmed = (slotsLeft || '').trim();
+    if (!trimmed) {
+      alert('Please enter a value for slots left');
+      return;
+    }
+    const num = Number(trimmed);
+    if (!Number.isInteger(num) || num < 0) {
+      alert('Please enter a valid non-negative whole number for slots left');
+      return;
+    }
+
+    if (saving) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await apiClient.post('/slider-content', {
+        key: 'slots_left',
+        value: String(num),
+        type: 'number',
+        section: 'slider',
+        order: 7,
+        isActive: true,
+      });
+
+      if (response && response.success) {
+        await fetchContents();
+        alert('Slots left saved successfully!');
+      } else {
+        const errorMsg = response?.error || response?.details || 'Failed to save slots left. Please try again.';
+        alert(`Error: ${errorMsg}`);
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'An error occurred while saving slots left. Please try again.';
+      alert(`Error: ${errorMsg}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveAppointmentReason = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    const trimmed = (appointmentReason || '').trim();
+    if (!trimmed) {
+      alert('Please enter appointment reason');
+      return;
+    }
+
+    if (saving) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await apiClient.post('/slider-content', {
+        key: 'appointment_reason',
+        value: trimmed,
+        type: 'text',
+        section: 'slider',
+        order: 8,
+        isActive: true,
+      });
+
+      if (response && response.success) {
+        await fetchContents();
+        alert('Appointment reason saved successfully!');
+      } else {
+        const errorMsg = response?.error || response?.details || 'Failed to save appointment reason. Please try again.';
+        alert(`Error: ${errorMsg}`);
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'An error occurred while saving appointment reason. Please try again.';
+      alert(`Error: ${errorMsg}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -344,6 +466,79 @@ export default function SliderContentPage() {
           </button>
         </div>
       </ComponentCard>
+      <ComponentCard title="Slots Left" desc="Controls slots left value shown on the homepage slider (whole number only).">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
+          <div className="md:col-span-2">
+            <div className="text-xs text-gray-500">Label</div>
+            <div className="text-sm break-words">{humanizeKey('slots_left')}</div>
+            <div className="text-[10px] text-gray-500 mt-1">Key: <span className="font-mono">slots_left</span></div>
+          </div>
+          <div className="md:col-span-2">
+            <div className="text-xs text-gray-500">Value (Number)</div>
+            <input
+              type="number"
+              inputMode="numeric"
+              step="1"
+              min="0"
+              className="w-full border px-2 py-1 rounded"
+              value={slotsLeft}
+              onChange={(e) => setSlotsLeft(e.target.value)}
+              placeholder="12"
+            />
+          </div>
+          <div className="md:col-span-1">
+            <div className="text-xs text-gray-500">Type</div>
+            <input className="w-full border px-2 py-1 rounded" value={'number'} readOnly />
+          </div>
+          <div className="md:col-span-1">
+            <div className="text-xs text-gray-500">Section</div>
+            <input className="w-full border px-2 py-1 rounded" value={'slider'} readOnly />
+          </div>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            disabled={saving || loading}
+            onClick={handleSaveSlotsLeft}
+            className="px-3 py-1 text-dark border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            {saving ? 'Saving...' : (slotsLeftKeyExists ? 'Save' : 'Create')}
+          </button>
+        </div>
+      </ComponentCard>
+      <ComponentCard title="Appointment Reason" desc="Controls appointment reason text shown on the homepage slider.">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
+          <div className="md:col-span-2">
+            <div className="text-xs text-gray-500">Label</div>
+            <div className="text-sm break-words">{humanizeKey('appointment_reason')}</div>
+            <div className="text-[10px] text-gray-500 mt-1">Key: <span className="font-mono">appointment_reason</span></div>
+          </div>
+          <div className="md:col-span-3">
+            <div className="text-xs text-gray-500">Value (Text)</div>
+            <input
+              type="text"
+              className="w-full border px-2 py-1 rounded"
+              value={appointmentReason}
+              onChange={(e) => setAppointmentReason(e.target.value)}
+              placeholder="Reason text"
+            />
+          </div>
+          <div className="md:col-span-1">
+            <div className="text-xs text-gray-500">Type</div>
+            <input className="w-full border px-2 py-1 rounded" value={'text'} readOnly />
+          </div>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            disabled={saving || loading}
+            onClick={handleSaveAppointmentReason}
+            className="px-3 py-1 text-dark border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            {saving ? 'Saving...' : (appointmentReasonKeyExists ? 'Save' : 'Create')}
+          </button>
+        </div>
+      </ComponentCard>
       <ComponentCard title="Slider Content" desc="Manage homepage slider dynamic content.">
         <div className="mb-4">
           <button onClick={handleCreateContent} className="px-4 py-2 bg-primary text-white rounded">Add Content</button>
@@ -389,5 +584,3 @@ export default function SliderContentPage() {
     </div>
   );
 }
-
-

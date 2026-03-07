@@ -4,7 +4,14 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { Application, ApplicationStatus } from '@/types';
-import { formatDate, formatCurrency, getStatusColor, canViewAmounts, downloadFileWithFallback } from '@/lib/utils';
+import {
+  formatDate,
+  formatCurrency,
+  getStatusColor,
+  canViewAmounts,
+  downloadFileWithFallback,
+  formatStatusForEmail,
+} from '@/lib/utils';
 import Button from '@/components/ui/button/Button';
 import ComponentCard from '@/components/common/ComponentCard';
 import { ArrowLeft } from 'lucide-react';
@@ -153,6 +160,8 @@ export default function ApplicationDetailsPage() {
     try {
       const response = await apiClient.patch(`/applications/${params.id}`, {
         status: newStatus,
+        oldStatus: formatStatusForEmail(String(application?.status || '')),
+        statusDisplay: formatStatusForEmail(String(newStatus)),
         note: comment,
         sendNotification,
       });
@@ -1155,4 +1164,3 @@ export default function ApplicationDetailsPage() {
     </div>
   );
 }
-
