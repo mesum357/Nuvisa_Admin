@@ -99,13 +99,13 @@ export async function PATCH(
     // Map frontend status to backend status format
     const mapStatusToBackend = (frontendStatus: string) => {
       const statusMap: Record<string, string> = {
-        'PENDING': 'submitted',
-        'UNDER_REVIEW': 'under_review',
-        'APPOINTMENT_BOOKED': 'appointment_booked',
-        'AT_EMBASSY': 'at_embassy',
-        'APPROVED': 'approved',
-        'REJECTED': 'rejected',
-        'COMPLETED': 'completed'
+        'PENDING': 'SUBMITTED',
+        'UNDER_REVIEW': 'UNDER REVIEW',
+        'APPOINTMENT_BOOKED': 'APPOINTMENT BOOKED',
+        'AT_EMBASSY': 'AT EMBASSY',
+        'APPROVED': 'APPROVED',
+        'REJECTED': 'REJECTED',
+        'COMPLETED': 'COMPLETED',
       };
       return statusMap[frontendStatus] || frontendStatus.toLowerCase();
     };
