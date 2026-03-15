@@ -287,6 +287,13 @@ export interface UpdateVisaPricingData {
 export interface ComparisonItem {
   feature: string;
   value: string;
+  tooltip?: string;
+}
+
+export interface ComparisonRow {
+  feature: string;
+  values: string[];
+  tooltip?: string;
 }
 
 export interface ComparisonSection {
@@ -298,6 +305,12 @@ export interface ComparisonSection {
   rightSideImage?: string | null;
   leftSideItems: ComparisonItem[] | string[];
   rightSideItems: ComparisonItem[] | string[];
+  comparisonColumns?: string[] | null;
+  comparisonRows?: ComparisonRow[] | null;
+  tooltip?: string | null;
+  detailSections?: { title: string; items: string[] }[] | null;
+  experienceType?: 'IMAGES' | 'TASKS' | null;
+  experienceItems?: any | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -312,6 +325,12 @@ export interface CreateComparisonSectionData {
   rightSideImage?: string;
   leftSideItems: ComparisonItem[] | string[];
   rightSideItems: ComparisonItem[] | string[];
+  comparisonColumns?: string[];
+  comparisonRows?: ComparisonRow[];
+  tooltip?: string;
+  detailSections?: { title: string; items: string[] }[];
+  experienceType?: 'IMAGES' | 'TASKS';
+  experienceItems?: any;
   isActive?: boolean;
 }
 
@@ -323,5 +342,11 @@ export interface UpdateComparisonSectionData {
   rightSideImage?: string;
   leftSideItems?: ComparisonItem[] | string[];
   rightSideItems?: ComparisonItem[] | string[];
+  comparisonColumns?: string[];
+  comparisonRows?: ComparisonRow[];
+  tooltip?: string;
+  detailSections?: { title: string; items: string[] }[];
+  experienceType?: 'IMAGES' | 'TASKS';
+  experienceItems?: any;
   isActive?: boolean;
 }
