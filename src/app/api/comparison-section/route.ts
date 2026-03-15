@@ -5,9 +5,9 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const path = searchParams.get('path') || 'active';
-    
+
     let data;
-    
+
     if (path === 'active') {
       // Get active comparison section
       data = await prisma.comparisonSection.findFirst({
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         where: { id: path }
       });
     }
-    
+
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching comparison section:', error);
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // Validate required fields
     if (!body.title || !body.leftSideTitle || !body.rightSideTitle) {
       return NextResponse.json(
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     const data = await prisma.comparisonSection.create({
       data: {
         title: body.title,
@@ -57,11 +57,17 @@ export async function POST(request: NextRequest) {
         rightSideImage: body.rightSideImage || null,
         leftSideItems: body.leftSideItems || [],
         rightSideItems: body.rightSideItems || [],
+        detailSections: body.detailSections || null,
+        experienceType: body.experienceType || "IMAGES",
+        experienceItems: body.experienceItems || null,
+        comparisonColumns: body.comparisonColumns || null,
+        comparisonRows: body.comparisonRows || null,
+        tooltip: body.tooltip || null,
         isActive: body.isActive !== undefined ? body.isActive : true,
         updatedBy: body.updatedBy || null
       }
     });
-    
+
     return NextResponse.json({
       success: true,
       data: data
@@ -80,7 +86,7 @@ export async function PATCH(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const action = searchParams.get('action');
-    
+
     if (!id) {
       return NextResponse.json(
         { success: false, error: 'ID is required' },
@@ -89,20 +95,20 @@ export async function PATCH(request: NextRequest) {
     }
 
     let data;
-    
+
     if (action === 'toggle') {
       // Toggle active status
       const existing = await prisma.comparisonSection.findUnique({
         where: { id }
       });
-      
+
       if (!existing) {
         return NextResponse.json(
           { success: false, error: 'Comparison section not found' },
           { status: 404 }
         );
       }
-      
+
       data = await prisma.comparisonSection.update({
         where: { id },
         data: { isActive: !existing.isActive }
@@ -110,7 +116,7 @@ export async function PATCH(request: NextRequest) {
     } else {
       // Update comparison section
       const body = await request.json();
-      
+
       data = await prisma.comparisonSection.update({
         where: { id },
         data: {
@@ -121,12 +127,18 @@ export async function PATCH(request: NextRequest) {
           rightSideImage: body.rightSideImage,
           leftSideItems: body.leftSideItems,
           rightSideItems: body.rightSideItems,
+          detailSections: body.detailSections,
+          experienceType: body.experienceType,
+          experienceItems: body.experienceItems,
+          comparisonColumns: body.comparisonColumns,
+          comparisonRows: body.comparisonRows,
+          tooltip: body.tooltip,
           isActive: body.isActive,
           updatedBy: body.updatedBy
         }
       });
     }
-    
+
     return NextResponse.json({
       success: true,
       data: data
@@ -144,30 +156,30 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     if (!id) {
       return NextResponse.json(
         { success: false, error: 'ID is required' },
         { status: 400 }
       );
     }
-    
+
     // Check if comparison section exists
     const existing = await prisma.comparisonSection.findUnique({
       where: { id }
     });
-    
+
     if (!existing) {
       return NextResponse.json(
         { success: false, error: 'Comparison section not found' },
         { status: 404 }
       );
     }
-    
+
     await prisma.comparisonSection.delete({
       where: { id }
     });
-    
+
     return NextResponse.json({
       success: true,
       message: 'Comparison section deleted successfully'

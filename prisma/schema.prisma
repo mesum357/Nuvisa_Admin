@@ -265,6 +265,12 @@ model ComparisonSection {
   rightSideImage    String?  // URL to right side image
   leftSideItems     Json     // Array of comparison items for left side
   rightSideItems    Json     // Array of comparison items for right side
+  detailSections    Json?    // Array of { title: string, items: string[] }
+  experienceType    String?  @default("IMAGES") // IMAGES or TASKS
+  experienceItems   Json?    // For TASKS: string[], for IMAGES: { leftImage: string, rightImage: string }
+  comparisonColumns Json?    // Array of column titles: string[]
+  comparisonRows    Json?    // Array of { feature: string, values: string[], tooltip?: string }
+  tooltip           String?
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

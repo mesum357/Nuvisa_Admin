@@ -16,12 +16,18 @@ export default function ComparisonSectionPage() {
   const [editingSection, setEditingSection] = useState<ComparisonSection | null>(null);
   const [formData, setFormData] = useState<CreateComparisonSectionData>({
     title: '',
+    tooltip: "",
     leftSideTitle: '',
     rightSideTitle: '',
     leftSideImage: '',
     rightSideImage: '',
-    leftSideItems: [{ feature: '', value: '' }],
-    rightSideItems: [{ feature: '', value: '' }],
+    leftSideItems: [{ feature: '', value: '', tooltip: '' }],
+    rightSideItems: [{ feature: '', value: '', tooltip: '' }],
+    detailSections: [{ title: 'DETAILS', items: [''] }],
+    experienceType: 'IMAGES',
+    experienceItems: { leftImage: '', rightImage: '' },
+    comparisonColumns: ['Traditional Agency', 'NUvisa'],
+    comparisonRows: [{ feature: '', values: ['', ''], tooltip: '' }],
     isActive: true,
   });
 
@@ -104,35 +110,46 @@ export default function ComparisonSectionPage() {
       setSaving(false);
     }
   };
-
   const resetForm = () => {
     setFormData({
       title: '',
+      tooltip: '',
       leftSideTitle: '',
       rightSideTitle: '',
       leftSideImage: '',
       rightSideImage: '',
-      leftSideItems: [{ feature: '', value: '' }],
-      rightSideItems: [{ feature: '', value: '' }],
+      leftSideItems: [{ feature: '', value: '', tooltip: '' }],
+      rightSideItems: [{ feature: '', value: '', tooltip: '' }],
+      detailSections: [{ title: 'DETAILS', items: [''] }],
+      experienceType: 'IMAGES',
+      experienceItems: { leftImage: '', rightImage: '' },
+      comparisonColumns: ['Traditional Agency', 'NUvisa'],
+      comparisonRows: [{ feature: '', values: ['', ''], tooltip: '' }],
       isActive: true,
     });
   };
 
   const normalizeItems = (items: (ComparisonItem | string)[]): ComparisonItem[] =>
     (items || []).map((item) =>
-      typeof item === 'string' ? { feature: '', value: item } : item
+      typeof item === 'string' ? { feature: '', value: item, tooltip: '' } : { ...item, tooltip: item.tooltip || '' }
     );
 
   const openEditModal = (section: ComparisonSection) => {
     setEditingSection(section);
     setFormData({
       title: section.title,
+      tooltip: section.tooltip || '',
       leftSideTitle: section.leftSideTitle,
       rightSideTitle: section.rightSideTitle,
       leftSideImage: section.leftSideImage || '',
       rightSideImage: section.rightSideImage || '',
       leftSideItems: normalizeItems(section.leftSideItems as (ComparisonItem | string)[]),
       rightSideItems: normalizeItems(section.rightSideItems as (ComparisonItem | string)[]),
+      detailSections: section.detailSections || [{ title: 'DETAILS', items: [] }],
+      experienceType: (section.experienceType as 'IMAGES' | 'TASKS') || 'IMAGES',
+      experienceItems: section.experienceItems || (section.experienceType === 'TASKS' ? [] : { leftImage: '', rightImage: '' }),
+      comparisonColumns: section.comparisonColumns || ['Traditional Agency', 'NUvisa'],
+      comparisonRows: section.comparisonRows || [{ feature: '', values: ['', ''], tooltip: '' }],
       isActive: section.isActive,
     });
     setShowModal(true);
@@ -143,12 +160,11 @@ export default function ComparisonSectionPage() {
     resetForm();
     setShowModal(true);
   };
-
   const addItemRow = () => {
     setFormData(prev => ({
       ...prev,
-      leftSideItems: [...prev.leftSideItems as ComparisonItem[], { feature: '', value: '' }],
-      rightSideItems: [...prev.rightSideItems as ComparisonItem[], { feature: '', value: '' }]
+      leftSideItems: [...prev.leftSideItems as ComparisonItem[], { feature: '', value: '', tooltip: '' }],
+      rightSideItems: [...prev.rightSideItems as ComparisonItem[], { feature: '', value: '', tooltip: '' }]
     }));
   };
 
@@ -160,13 +176,13 @@ export default function ComparisonSectionPage() {
     }));
   };
 
-  const updateItemRow = (index: number, field: 'feature' | 'leftValue' | 'rightValue', value: string) => {
+  const updateItemRow = (index: number, field: 'feature' | 'leftValue' | 'rightValue' | 'tooltip', value: string) => {
     setFormData(prev => {
       const newLeftItems = [...(prev.leftSideItems as ComparisonItem[])];
       const newRightItems = [...(prev.rightSideItems as ComparisonItem[])];
 
-      if (!newLeftItems[index]) newLeftItems[index] = { feature: '', value: '' };
-      if (!newRightItems[index]) newRightItems[index] = { feature: '', value: '' };
+      if (!newLeftItems[index]) newLeftItems[index] = { feature: '', value: '', tooltip: '' };
+      if (!newRightItems[index]) newRightItems[index] = { feature: '', value: '', tooltip: '' };
 
       if (field === 'feature') {
         newLeftItems[index].feature = value;
@@ -175,6 +191,9 @@ export default function ComparisonSectionPage() {
         newLeftItems[index].value = value;
       } else if (field === 'rightValue') {
         newRightItems[index].value = value;
+      } else if (field === 'tooltip') {
+        newLeftItems[index].tooltip = value;
+        newRightItems[index].tooltip = value;
       }
 
       return {
@@ -182,6 +201,166 @@ export default function ComparisonSectionPage() {
         leftSideItems: newLeftItems,
         rightSideItems: newRightItems
       };
+    });
+  };
+
+  // Multi-Column Methods
+  const addComparisonColumn = () => {
+    setFormData(prev => {
+      const newColumns = [...(prev.comparisonColumns || [])];
+      if (newColumns.length >= 6) return prev; // Limit to 6 columns
+      newColumns.push(`Column ${newColumns.length + 1}`);
+
+      const newRows = (prev.comparisonRows || []).map(row => ({
+        ...row,
+        values: [...row.values, '']
+      }));
+
+      return { ...prev, comparisonColumns: newColumns, comparisonRows: newRows };
+    });
+  };
+
+  const removeComparisonColumn = (index: number) => {
+    setFormData(prev => {
+      const newColumns = (prev.comparisonColumns || []).filter((_, i) => i !== index);
+      const newRows = (prev.comparisonRows || []).map(row => ({
+        ...row,
+        values: row.values.filter((_, i) => i !== index)
+      }));
+      return { ...prev, comparisonColumns: newColumns, comparisonRows: newRows };
+    });
+  };
+
+  const updateComparisonColumn = (index: number, name: string) => {
+    setFormData(prev => {
+      const newColumns = [...(prev.comparisonColumns || [])];
+      newColumns[index] = name;
+      return { ...prev, comparisonColumns: newColumns };
+    });
+  };
+
+  const addComparisonRow = () => {
+    setFormData(prev => ({
+      ...prev,
+      comparisonRows: [
+        ...(prev.comparisonRows || []),
+        { feature: '', values: new Array((prev.comparisonColumns || []).length).fill(''), tooltip: '' }
+      ]
+    }));
+  };
+
+  const removeComparisonRow = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      comparisonRows: (prev.comparisonRows || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateComparisonRow = (index: number, field: 'feature' | 'tooltip', value: string) => {
+    setFormData(prev => {
+      const newRows = [...(prev.comparisonRows || [])];
+      newRows[index] = { ...newRows[index], [field]: value };
+      return { ...prev, comparisonRows: newRows };
+    });
+  };
+
+  const updateComparisonRowValue = (rowIndex: number, colIndex: number, value: string) => {
+    setFormData(prev => {
+      const newRows = [...(prev.comparisonRows || [])];
+      const newValues = [...newRows[rowIndex].values];
+      newValues[colIndex] = value;
+      newRows[rowIndex] = { ...newRows[rowIndex], values: newValues };
+      return { ...prev, comparisonRows: newRows };
+    });
+  };
+
+
+  const addDetailSection = () => {
+    setFormData(prev => ({
+      ...prev,
+      detailSections: [...(prev.detailSections || []), { title: '', items: [''] }]
+    }));
+  };
+
+  const removeDetailSection = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      detailSections: (prev.detailSections || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateDetailSectionTitle = (index: number, title: string) => {
+    setFormData(prev => {
+      const newSections = [...(prev.detailSections || [])];
+      newSections[index].title = title;
+      return { ...prev, detailSections: newSections };
+    });
+  };
+
+  const addDetailItem = (sectionIndex: number) => {
+    setFormData(prev => {
+      const newSections = [...(prev.detailSections || [])];
+      newSections[sectionIndex].items = [...newSections[sectionIndex].items, ''];
+      return { ...prev, detailSections: newSections };
+    });
+  };
+
+  const removeDetailItem = (sectionIndex: number, itemIndex: number) => {
+    setFormData(prev => {
+      const newSections = [...(prev.detailSections || [])];
+      newSections[sectionIndex].items = newSections[sectionIndex].items.filter((_, i) => i !== itemIndex);
+      return { ...prev, detailSections: newSections };
+    });
+  };
+
+  const updateDetailItemValue = (sectionIndex: number, itemIndex: number, value: string) => {
+    setFormData(prev => {
+      const newSections = [...(prev.detailSections || [])];
+      newSections[sectionIndex].items[itemIndex] = value;
+      return { ...prev, detailSections: newSections };
+    });
+  };
+
+  const handleExperienceTypeChange = (type: 'IMAGES' | 'TASKS') => {
+    setFormData(prev => ({
+      ...prev,
+      experienceType: type,
+      experienceItems: type === 'TASKS' ? [''] : { leftImage: prev.leftSideImage || '', rightImage: prev.rightSideImage || '' }
+    }));
+  };
+
+  const addExperienceTask = () => {
+    setFormData(prev => ({
+      ...prev,
+      experienceItems: [...(Array.isArray(prev.experienceItems) ? prev.experienceItems : []), '']
+    }));
+  };
+
+  const removeExperienceTask = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      experienceItems: (Array.isArray(prev.experienceItems) ? prev.experienceItems : []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateExperienceTaskValue = (index: number, value: string) => {
+    setFormData(prev => {
+      const newItems = [...(Array.isArray(prev.experienceItems) ? prev.experienceItems : [])];
+      newItems[index] = value;
+      return { ...prev, experienceItems: newItems };
+    });
+  };
+
+  const updateExperienceImage = (side: 'left' | 'right', url: string) => {
+    setFormData(prev => {
+      const newItems = typeof prev.experienceItems === 'object' && !Array.isArray(prev.experienceItems)
+        ? { ...prev.experienceItems }
+        : { leftImage: '', rightImage: '' };
+
+      if (side === 'left') newItems.leftImage = url;
+      else newItems.rightImage = url;
+
+      return { ...prev, experienceItems: newItems };
     });
   };
 
@@ -255,27 +434,33 @@ export default function ComparisonSectionPage() {
                 <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b">
                   <tr>
                     <th className="px-6 py-3 font-semibold">Feature</th>
-                    <th className="px-6 py-3 font-semibold text-red-600 border-l">{comparisonSection.leftSideTitle}</th>
-                    <th className="px-6 py-3 font-semibold text-green-600 border-l">{comparisonSection.rightSideTitle}</th>
+                    {(comparisonSection.comparisonColumns || []).map((col, idx) => (
+                      <th key={idx} className={`px-6 py-3 font-semibold border-l ${idx === 0 ? 'text-[#6F48FF]' : 'text-gray-600'}`}>
+                        {col}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {((comparisonSection.leftSideItems || []) as ComparisonItem[]).map((leftItem, index) => {
-                    const rightItem = ((comparisonSection.rightSideItems || []) as ComparisonItem[])[index] || { value: '' };
-                    return (
-                      <tr key={index} className="bg-white border-b hover:bg-gray-50">
-                        <td className="px-6 py-4 font-medium text-gray-900 border-r">{leftItem.feature || (typeof leftItem === 'string' ? 'Feature' : '')}</td>
-                        <td className="px-6 py-4 text-red-700 border-r">{typeof leftItem === 'string' ? leftItem : leftItem.value}</td>
-                        <td className="px-6 py-4 text-green-700">{typeof rightItem === 'string' ? rightItem : rightItem.value}</td>
-                      </tr>
-                    );
-                  })}
-                  {(!comparisonSection.leftSideItems || comparisonSection.leftSideItems.length === 0) && (
+                  {(comparisonSection.comparisonRows || []).map((row, rIdx) => (
+                    <tr key={rIdx} className="bg-white border-b hover:bg-gray-50">
+                      <td className="px-6 py-4 font-medium text-gray-900 border-r">{row.feature}</td>
+                      {row.values.map((val, cIdx) => (
+                        <td key={cIdx} className={`px-6 py-4 border-r ${cIdx === 0 ? 'text-[#6F48FF] font-bold' : 'text-gray-600'}`}>
+                          {val}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  {(!comparisonSection.comparisonRows || comparisonSection.comparisonRows.length === 0) && (
                     <tr>
-                      <td colSpan={3} className="px-6 py-4 text-center text-gray-500">No comparison points available</td>
+                      <td colSpan={(comparisonSection.comparisonColumns?.length || 0) + 1} className="px-6 py-4 text-center text-gray-500">
+                        No comparison points available. Start by adding columns and rows below.
+                      </td>
                     </tr>
                   )}
                 </tbody>
+
               </table>
             </div>
           </ComponentCard>
@@ -302,7 +487,7 @@ export default function ComparisonSectionPage() {
             {editingSection ? 'Edit Comparison Points' : 'Create Comparison Points'}
           </h2>
           {/* Status Toggle */}
-          <div className="flex items-center justify-between p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+          <div className="flex items-center justify-between p-6 bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -318,10 +503,8 @@ export default function ComparisonSectionPage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
                   className="sr-only"
                 />
-                <div className={`w-12 h-6 rounded-full transition-colors duration-200 ${formData.isActive ? 'bg-blue-600' : 'bg-gray-300'
-                  }`}>
-                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${formData.isActive ? 'translate-x-6' : 'translate-x-0.5'
-                    } mt-0.5`}></div>
+                <div className={`w-12 h-6 rounded-full transition-colors duration-200 ${formData.isActive ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${formData.isActive ? 'translate-x-6' : 'translate-x-0.5'} mt-0.5`}></div>
                 </div>
               </div>
               <span className="ml-3 text-sm font-medium text-gray-700">
@@ -331,12 +514,12 @@ export default function ComparisonSectionPage() {
           </div>
 
           {/* Section Titles */}
-          <div className="space-y-4 p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+          <div className="space-y-4 p-6 bg-linear-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-4 h-4 bg-blue-500 rounded-full shadow-sm"></div>
               <h3 className="text-lg font-semibold text-gray-900">Section Titles</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-gray-500 uppercase">Main Title <span className="text-red-500">*</span></label>
                 <input
@@ -348,100 +531,307 @@ export default function ComparisonSectionPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-red-500 uppercase">Left Side Title <span className="text-red-500">*</span></label>
+                <label className="text-xs font-semibold text-blue-500 uppercase">Tooltip (Optional)</label>
                 <input
                   type="text"
-                  value={formData.leftSideTitle}
-                  onChange={(e) => setFormData(prev => ({ ...prev, leftSideTitle: e.target.value }))}
-                  className="w-full px-3 py-2 border border-red-200 bg-red-50 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900"
-                  placeholder="e.g. Traditional Agents"
+                  value={formData.tooltip || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, tooltip: e.target.value }))}
+                  className="w-full px-3 py-2 border border-blue-200 bg-blue-50 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Overall tooltip for the section..."
                 />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-green-500 uppercase">Right Side Title <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={formData.rightSideTitle}
-                  onChange={(e) => setFormData(prev => ({ ...prev, rightSideTitle: e.target.value }))}
-                  className="w-full px-3 py-2 border border-green-200 bg-green-50 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900"
-                  placeholder="e.g. NUvisa"
-                />
+            </div>
+
+          </div>
+
+          {/* Multi-Column Comparison Management */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between p-4 bg-linear-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 bg-indigo-500 rounded-full shadow-sm"></div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Multi-Column Comparison (New)</h3>
+                  <p className="text-sm text-gray-600 italic">Use this for 4+ company comparisons like the reference image</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={addComparisonColumn}
+                  disabled={(formData.comparisonColumns?.length || 0) >= 6}
+                  variant="outline"
+                  size="sm"
+                  className="bg-white text-indigo-600 border-indigo-200"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Column
+                </Button>
+                <Button
+                  onClick={addComparisonRow}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Row
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-xl p-6">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="p-3 text-left w-64 uppercase text-[10px] font-bold text-gray-500 tracking-wider">Feature / Company</th>
+                    {(formData.comparisonColumns || []).map((col, cIdx) => (
+                      <th key={cIdx} className="p-3 text-left min-w-[150px] relative group">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={col}
+                            onChange={(e) => updateComparisonColumn(cIdx, e.target.value)}
+                            className="bg-transparent border-none focus:ring-0 font-bold text-gray-900 w-full uppercase"
+                            placeholder={`Company ${cIdx + 1}`}
+                          />
+                          {(formData.comparisonColumns || []).length > 1 && (
+                            <button
+                              onClick={() => removeComparisonColumn(cIdx)}
+                              className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </th>
+                    ))}
+                    <th className="p-3 w-48 uppercase text-[10px] font-bold text-gray-500 tracking-wider">Tooltip</th>
+                    <th className="p-3 w-12" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {(formData.comparisonRows || []).map((row, rIdx) => (
+                    <tr key={rIdx} className="group hover:bg-gray-50 transition-colors">
+                      <td className="p-3">
+                        <input
+                          type="text"
+                          value={row.feature}
+                          onChange={(e) => updateComparisonRow(rIdx, 'feature', e.target.value)}
+                          className="w-full p-2 border border-gray-200 rounded focus:ring-1 focus:ring-indigo-500 bg-white font-medium"
+                          placeholder="e.g. Price"
+                        />
+                      </td>
+                      {row.values.map((val, cIdx) => (
+                        <td key={cIdx} className="p-3">
+                          <input
+                            type="text"
+                            value={val}
+                            onChange={(e) => updateComparisonRowValue(rIdx, cIdx, e.target.value)}
+                            className="w-full p-2 border border-gray-200 rounded focus:ring-1 focus:ring-indigo-500 bg-white"
+                            placeholder="Value"
+                          />
+                        </td>
+                      ))}
+                      <td className="p-3">
+                        <input
+                          type="text"
+                          value={row.tooltip || ''}
+                          onChange={(e) => updateComparisonRow(rIdx, 'tooltip', e.target.value)}
+                          className="w-full p-2 border border-blue-100 rounded focus:ring-1 focus:ring-blue-500 bg-blue-50/50 text-xs italic"
+                          placeholder="Tooltip info..."
+                        />
+                      </td>
+                      <td className="p-3">
+                        <button
+                          onClick={() => removeComparisonRow(rIdx)}
+                          className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {(formData.comparisonRows || []).length === 0 && (
+                    <tr>
+                      <td colSpan={(formData.comparisonColumns?.length || 0) + 3} className="p-10 text-center text-gray-400 bg-gray-50/50 italic">
+                        No rows added yet. Click "Add Row" to start.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+              <div className="mt-4 flex justify-end">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Table will adapt automatically on frontend</p>
               </div>
             </div>
           </div>
 
-          {/* Comparison Rows Management */}
+          <div className="border-t border-gray-200 my-8"></div>
+
+          {/* Detail Sections Management */}
           <div className="space-y-6">
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+            <div className="flex items-center justify-between p-4 bg-linear-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
               <div className="flex items-center gap-3">
-                <div className="w-4 h-4 bg-gray-500 rounded-full shadow-sm"></div>
+                <div className="w-4 h-4 bg-purple-500 rounded-full shadow-sm"></div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Features Comparison</h3>
-                  <p className="text-sm text-gray-600">Add features and their values for both sides</p>
+                  <h3 className="text-lg font-semibold text-gray-900">Detail Sections</h3>
+                  <p className="text-sm text-gray-600">Add dynamic details, tips, or FAQ bullets</p>
                 </div>
               </div>
               <Button
-                onClick={addItemRow}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={addDetailSection}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
                 size="sm"
               >
                 <Plus className="h-4 w-4" />
-                Add Feature Row
+                Add Detail Section
               </Button>
             </div>
 
-            <div className="space-y-4">
-              {((formData.leftSideItems || []) as ComparisonItem[]).map((leftItem, index) => {
-                const rightItem = ((formData.rightSideItems || []) as ComparisonItem[])[index] || { value: '' };
-                const cLeftItem = typeof leftItem === 'string' ? { feature: '', value: leftItem } : leftItem;
-                const cRightItem = typeof rightItem === 'string' ? { feature: '', value: rightItem } : rightItem;
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {(formData.detailSections || []).map((section, sIndex) => (
+                <div key={sIndex} className="relative p-6 bg-white border border-gray-200 rounded-xl shadow-sm space-y-4">
+                  <Button
+                    onClick={() => removeDetailSection(sIndex)}
+                    variant="outline"
+                    size="sm"
+                    className="absolute -top-3 -right-3 rounded-full h-8 w-8 p-0 bg-white text-red-600 hover:text-red-700 border-red-200 shadow-sm"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
 
-                return (
-                  <div key={index} className="group relative flex flex-col md:flex-row gap-4 p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 shadow-sm transition-colors">
-                    <Button
-                      onClick={() => removeItemRow(index)}
-                      variant="outline"
-                      size="sm"
-                      className="absolute -top-3 -right-3 rounded-full h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 shadow-sm"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Section Title</label>
+                    <input
+                      type="text"
+                      value={section.title}
+                      onChange={(e) => updateDetailSectionTitle(sIndex, e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 font-bold"
+                      placeholder="e.g. DETAILS or TIPS"
+                    />
+                  </div>
 
-                    <div className="flex-1 space-y-2">
-                      <label className="text-xs font-semibold text-gray-500 uppercase">Feature Name</label>
-                      <input
-                        type="text"
-                        value={cLeftItem.feature || ''}
-                        onChange={(e) => updateItemRow(index, 'feature', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                        placeholder="e.g. Price"
-                      />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-gray-500 uppercase">Bullet Points</label>
+                      <Button
+                        onClick={() => addDetailItem(sIndex)}
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[10px] text-purple-600 hover:text-purple-700 border-none shadow-none"
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Add Point
+                      </Button>
                     </div>
-
-                    <div className="flex-1 space-y-2">
-                      <label className="text-xs font-semibold text-red-500 uppercase">{formData.leftSideTitle || 'Traditional'}</label>
-                      <input
-                        type="text"
-                        value={cLeftItem.value || ''}
-                        onChange={(e) => updateItemRow(index, 'leftValue', e.target.value)}
-                        className="w-full px-3 py-2 border border-red-200 bg-red-50 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900"
-                        placeholder="e.g. £300 + fees"
-                      />
-                    </div>
-
-                    <div className="flex-1 space-y-2">
-                      <label className="text-xs font-semibold text-green-500 uppercase">{formData.rightSideTitle || 'NUvisa'}</label>
-                      <input
-                        type="text"
-                        value={cRightItem.value || ''}
-                        onChange={(e) => updateItemRow(index, 'rightValue', e.target.value)}
-                        className="w-full px-3 py-2 border border-green-200 bg-green-50 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900"
-                        placeholder="e.g. Flat £200"
-                      />
+                    <div className="space-y-2">
+                      {section.items.map((item, iIndex) => (
+                        <div key={iIndex} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={item}
+                            onChange={(e) => updateDetailItemValue(sIndex, iIndex, e.target.value)}
+                            className="flex-1 px-3 py-1.5 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                            placeholder="Add detail point..."
+                          />
+                          <Button
+                            onClick={() => removeDetailItem(sIndex, iIndex)}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-red-400 hover:text-red-600 border-none shadow-none"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Experience Section Management */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between p-4 bg-linear-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 bg-orange-500 rounded-full shadow-sm"></div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Experience Section</h3>
+                  <p className="text-sm text-gray-600">Choose between displaying comparison images or a task list</p>
+                </div>
+              </div>
+              <div className="flex bg-gray-200 p-1 rounded-lg">
+                <button
+                  onClick={() => handleExperienceTypeChange('IMAGES')}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${formData.experienceType === 'IMAGES' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  Images
+                </button>
+                <button
+                  onClick={() => handleExperienceTypeChange('TASKS')}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${formData.experienceType === 'TASKS' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  Task List
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm">
+              {formData.experienceType === 'TASKS' ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-gray-700">Experience Tasks</h4>
+                    <Button
+                      onClick={addExperienceTask}
+                      size="sm"
+                      variant="outline"
+                      className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                    >
+                      <Plus className="h-4 w-4" /> Add Task
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {(Array.isArray(formData.experienceItems) ? formData.experienceItems : []).map((task, index) => (
+                      <div key={index} className="flex gap-2">
+                        <input
+                          type="text"
+                          value={task}
+                          onChange={(e) => updateExperienceTaskValue(index, e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="Experience task item..."
+                        />
+                        <Button
+                          onClick={() => removeExperienceTask(index)}
+                          variant="outline"
+                          className="text-red-400 hover:text-red-600 border-none shadow-none"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Left Side Image URL</label>
+                    <input
+                      type="text"
+                      value={(formData.experienceItems as any)?.leftImage || ''}
+                      onChange={(e) => updateExperienceImage('left', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      placeholder="https://..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Right Side Image URL</label>
+                    <input
+                      type="text"
+                      value={(formData.experienceItems as any)?.rightImage || ''}
+                      onChange={(e) => updateExperienceImage('right', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      placeholder="https://..."
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
