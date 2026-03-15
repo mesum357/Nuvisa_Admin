@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Edit2, Eye, EyeOff, Loader2, Plus, Save, X } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
-import { ComparisonSection, CreateComparisonSectionData, UpdateComparisonSectionData } from '@/types';
+import { ComparisonSection, CreateComparisonSectionData, UpdateComparisonSectionData, ComparisonItem } from '@/types';
 import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { Modal } from '@/components/ui/modal';
@@ -20,8 +20,8 @@ export default function ComparisonSectionPage() {
     rightSideTitle: '',
     leftSideImage: '',
     rightSideImage: '',
-    leftSideItems: [''],
-    rightSideItems: [''],
+    leftSideItems: [{ feature: '', value: '' }],
+    rightSideItems: [{ feature: '', value: '' }],
     isActive: true,
   });
 
@@ -63,7 +63,7 @@ export default function ComparisonSectionPage() {
 
   const handleUpdate = async () => {
     if (!editingSection) return;
-    
+
     setSaving(true);
     try {
       const response = await apiClient.patch<ComparisonSection>(
@@ -87,7 +87,7 @@ export default function ComparisonSectionPage() {
 
   const handleToggleActive = async () => {
     if (!comparisonSection) return;
-    
+
     setSaving(true);
     try {
       const response = await apiClient.patch<ComparisonSection>(
@@ -112,11 +112,16 @@ export default function ComparisonSectionPage() {
       rightSideTitle: '',
       leftSideImage: '',
       rightSideImage: '',
-      leftSideItems: [''],
-      rightSideItems: [''],
+      leftSideItems: [{ feature: '', value: '' }],
+      rightSideItems: [{ feature: '', value: '' }],
       isActive: true,
     });
   };
+
+  const normalizeItems = (items: (ComparisonItem | string)[]): ComparisonItem[] =>
+    (items || []).map((item) =>
+      typeof item === 'string' ? { feature: '', value: item } : item
+    );
 
   const openEditModal = (section: ComparisonSection) => {
     setEditingSection(section);
@@ -126,8 +131,8 @@ export default function ComparisonSectionPage() {
       rightSideTitle: section.rightSideTitle,
       leftSideImage: section.leftSideImage || '',
       rightSideImage: section.rightSideImage || '',
-      leftSideItems: section.leftSideItems,
-      rightSideItems: section.rightSideItems,
+      leftSideItems: normalizeItems(section.leftSideItems as (ComparisonItem | string)[]),
+      rightSideItems: normalizeItems(section.rightSideItems as (ComparisonItem | string)[]),
       isActive: section.isActive,
     });
     setShowModal(true);
@@ -139,28 +144,45 @@ export default function ComparisonSectionPage() {
     setShowModal(true);
   };
 
-  const addItem = (side: 'left' | 'right') => {
-    const key = side === 'left' ? 'leftSideItems' : 'rightSideItems';
+  const addItemRow = () => {
     setFormData(prev => ({
       ...prev,
-      [key]: [...prev[key], '']
+      leftSideItems: [...prev.leftSideItems as ComparisonItem[], { feature: '', value: '' }],
+      rightSideItems: [...prev.rightSideItems as ComparisonItem[], { feature: '', value: '' }]
     }));
   };
 
-  const removeItem = (side: 'left' | 'right', index: number) => {
-    const key = side === 'left' ? 'leftSideItems' : 'rightSideItems';
+  const removeItemRow = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      [key]: prev[key].filter((_, i) => i !== index)
+      leftSideItems: (prev.leftSideItems as ComparisonItem[]).filter((_, i) => i !== index),
+      rightSideItems: (prev.rightSideItems as ComparisonItem[]).filter((_, i) => i !== index)
     }));
   };
 
-  const updateItem = (side: 'left' | 'right', index: number, value: string) => {
-    const key = side === 'left' ? 'leftSideItems' : 'rightSideItems';
-    setFormData(prev => ({
-      ...prev,
-      [key]: prev[key].map((item, i) => i === index ? value : item)
-    }));
+  const updateItemRow = (index: number, field: 'feature' | 'leftValue' | 'rightValue', value: string) => {
+    setFormData(prev => {
+      const newLeftItems = [...(prev.leftSideItems as ComparisonItem[])];
+      const newRightItems = [...(prev.rightSideItems as ComparisonItem[])];
+
+      if (!newLeftItems[index]) newLeftItems[index] = { feature: '', value: '' };
+      if (!newRightItems[index]) newRightItems[index] = { feature: '', value: '' };
+
+      if (field === 'feature') {
+        newLeftItems[index].feature = value;
+        newRightItems[index].feature = value;
+      } else if (field === 'leftValue') {
+        newLeftItems[index].value = value;
+      } else if (field === 'rightValue') {
+        newRightItems[index].value = value;
+      }
+
+      return {
+        ...prev,
+        leftSideItems: newLeftItems,
+        rightSideItems: newRightItems
+      };
+    });
   };
 
   if (loading) {
@@ -208,11 +230,10 @@ export default function ComparisonSectionPage() {
               <div>
               </div>
               <div className="flex items-center gap-3">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  comparisonSection.isActive 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${comparisonSection.isActive
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-800'
+                  }`}>
                   {comparisonSection.isActive ? 'Active' : 'Inactive'}
                 </span>
                 <Button
@@ -228,47 +249,36 @@ export default function ComparisonSectionPage() {
           </ComponentCard>
 
           {/* Comparison Points Display */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Side Points */}
-            <ComponentCard title={comparisonSection.leftSideTitle}>
-              <div className="space-y-4">
-                <div className="space-y-3">
-                  {(comparisonSection.leftSideItems || []).length > 0 ? (
-                    (comparisonSection.leftSideItems || []).map((item, index) => (
-                      <div key={index} className="flex items-start gap-3 p-3 bg-red-50 rounded-lg">
-                        <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mt-2"></div>
-                        <span className="text-sm text-gray-700">{item}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-500">
-                      No left side points available
-                    </div>
+          <ComponentCard title="Comparison Points">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-6 py-3 font-semibold">Feature</th>
+                    <th className="px-6 py-3 font-semibold text-red-600 border-l">{comparisonSection.leftSideTitle}</th>
+                    <th className="px-6 py-3 font-semibold text-green-600 border-l">{comparisonSection.rightSideTitle}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {((comparisonSection.leftSideItems || []) as ComparisonItem[]).map((leftItem, index) => {
+                    const rightItem = ((comparisonSection.rightSideItems || []) as ComparisonItem[])[index] || { value: '' };
+                    return (
+                      <tr key={index} className="bg-white border-b hover:bg-gray-50">
+                        <td className="px-6 py-4 font-medium text-gray-900 border-r">{leftItem.feature || (typeof leftItem === 'string' ? 'Feature' : '')}</td>
+                        <td className="px-6 py-4 text-red-700 border-r">{typeof leftItem === 'string' ? leftItem : leftItem.value}</td>
+                        <td className="px-6 py-4 text-green-700">{typeof rightItem === 'string' ? rightItem : rightItem.value}</td>
+                      </tr>
+                    );
+                  })}
+                  {(!comparisonSection.leftSideItems || comparisonSection.leftSideItems.length === 0) && (
+                    <tr>
+                      <td colSpan={3} className="px-6 py-4 text-center text-gray-500">No comparison points available</td>
+                    </tr>
                   )}
-                </div>
-              </div>
-            </ComponentCard>
-
-            {/* Right Side Points */}
-            <ComponentCard title={comparisonSection.rightSideTitle}>
-              <div className="space-y-4">
-                <div className="space-y-3">
-                  {(comparisonSection.rightSideItems || []).length > 0 ? (
-                    (comparisonSection.rightSideItems || []).map((item, index) => (
-                      <div key={index} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
-                        <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0 mt-2"></div>
-                        <span className="text-sm text-gray-700">{item}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-500">
-                      No right side points available
-                    </div>
-                  )}
-                </div>
-              </div>
-            </ComponentCard>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          </ComponentCard>
         </div>
       ) : (
         <ComponentCard title="No Comparison Section">
@@ -287,7 +297,7 @@ export default function ComparisonSectionPage() {
         onClose={() => setShowModal(false)}
         className="max-w-6xl p-8"
       >
-        <div className="space-y-8">
+        <div className="space-y-8 h-[calc(100vh-10rem)] overflow-y-auto overflow-x-hidden">
           <h2 className="text-2xl font-bold text-gray-900">
             {editingSection ? 'Edit Comparison Points' : 'Create Comparison Points'}
           </h2>
@@ -308,12 +318,10 @@ export default function ComparisonSectionPage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
                   className="sr-only"
                 />
-                <div className={`w-12 h-6 rounded-full transition-colors duration-200 ${
-                  formData.isActive ? 'bg-blue-600' : 'bg-gray-300'
-                }`}>
-                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${
-                    formData.isActive ? 'translate-x-6' : 'translate-x-0.5'
-                  } mt-0.5`}></div>
+                <div className={`w-12 h-6 rounded-full transition-colors duration-200 ${formData.isActive ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}>
+                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${formData.isActive ? 'translate-x-6' : 'translate-x-0.5'
+                    } mt-0.5`}></div>
                 </div>
               </div>
               <span className="ml-3 text-sm font-medium text-gray-700">
@@ -322,94 +330,118 @@ export default function ComparisonSectionPage() {
             </label>
           </div>
 
-          {/* Comparison Points Management */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Left Side - Traditional Agency Points */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl border border-red-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-red-500 rounded-full shadow-sm"></div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Traditional Agency</h3>
-                    <p className="text-sm text-gray-600">Negative comparison points</p>
-                  </div>
-                </div>
-                <Button
-                  onClick={() => addItem('left')}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Point
-                </Button>
+          {/* Section Titles */}
+          <div className="space-y-4 p-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-4 h-4 bg-blue-500 rounded-full shadow-sm"></div>
+              <h3 className="text-lg font-semibold text-gray-900">Section Titles</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase">Main Title <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="e.g. Why Choose NUvisa?"
+                />
               </div>
-              
-              <div className="space-y-4">
-                {formData.leftSideItems.map((item, index) => (
-                  <div key={index} className="group flex gap-3 items-start p-4 bg-white border border-red-200 rounded-lg hover:border-red-300 transition-colors">
-                    <div className="w-3 h-3 bg-red-500 rounded-full flex-shrink-0 mt-2 shadow-sm"></div>
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => updateItem('left', index, e.target.value)}
-                      className="flex-1 px-3 py-2 border-0 bg-transparent focus:outline-none focus:ring-0 text-gray-700 placeholder-gray-400"
-                      placeholder="Enter comparison point (e.g., £250-£300 + extra fees)"
-                    />
-                    <Button
-                      onClick={() => removeItem('left', index)}
-                      variant="outline"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-red-500 uppercase">Left Side Title <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={formData.leftSideTitle}
+                  onChange={(e) => setFormData(prev => ({ ...prev, leftSideTitle: e.target.value }))}
+                  className="w-full px-3 py-2 border border-red-200 bg-red-50 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900"
+                  placeholder="e.g. Traditional Agents"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-green-500 uppercase">Right Side Title <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={formData.rightSideTitle}
+                  onChange={(e) => setFormData(prev => ({ ...prev, rightSideTitle: e.target.value }))}
+                  className="w-full px-3 py-2 border border-green-200 bg-green-50 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900"
+                  placeholder="e.g. NUvisa"
+                />
               </div>
             </div>
+          </div>
 
-            {/* Right Side - NUvisa Points */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-green-500 rounded-full shadow-sm"></div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">NUvisa</h3>
-                    <p className="text-sm text-gray-600">Positive comparison points</p>
-                  </div>
+          {/* Comparison Rows Management */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 bg-gray-500 rounded-full shadow-sm"></div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Features Comparison</h3>
+                  <p className="text-sm text-gray-600">Add features and their values for both sides</p>
                 </div>
-                <Button
-                  onClick={() => addItem('right')}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Point
-                </Button>
               </div>
-              
-              <div className="space-y-4">
-                {formData.rightSideItems.map((item, index) => (
-                  <div key={index} className="group flex gap-3 items-start p-4 bg-white border border-green-200 rounded-lg hover:border-green-300 transition-colors">
-                    <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0 mt-2 shadow-sm"></div>
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => updateItem('right', index, e.target.value)}
-                      className="flex-1 px-3 py-2 border-0 bg-transparent focus:outline-none focus:ring-0 text-gray-700 placeholder-gray-400"
-                      placeholder="Enter comparison point (e.g., Flat £200 - no hidden fees)"
-                    />
+              <Button
+                onClick={addItemRow}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                size="sm"
+              >
+                <Plus className="h-4 w-4" />
+                Add Feature Row
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {((formData.leftSideItems || []) as ComparisonItem[]).map((leftItem, index) => {
+                const rightItem = ((formData.rightSideItems || []) as ComparisonItem[])[index] || { value: '' };
+                const cLeftItem = typeof leftItem === 'string' ? { feature: '', value: leftItem } : leftItem;
+                const cRightItem = typeof rightItem === 'string' ? { feature: '', value: rightItem } : rightItem;
+
+                return (
+                  <div key={index} className="group relative flex flex-col md:flex-row gap-4 p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 shadow-sm transition-colors">
                     <Button
-                      onClick={() => removeItem('right', index)}
+                      onClick={() => removeItemRow(index)}
                       variant="outline"
                       size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      className="absolute -top-3 -right-3 rounded-full h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 shadow-sm"
                     >
                       <X className="h-4 w-4" />
                     </Button>
+
+                    <div className="flex-1 space-y-2">
+                      <label className="text-xs font-semibold text-gray-500 uppercase">Feature Name</label>
+                      <input
+                        type="text"
+                        value={cLeftItem.feature || ''}
+                        onChange={(e) => updateItemRow(index, 'feature', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                        placeholder="e.g. Price"
+                      />
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <label className="text-xs font-semibold text-red-500 uppercase">{formData.leftSideTitle || 'Traditional'}</label>
+                      <input
+                        type="text"
+                        value={cLeftItem.value || ''}
+                        onChange={(e) => updateItemRow(index, 'leftValue', e.target.value)}
+                        className="w-full px-3 py-2 border border-red-200 bg-red-50 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900"
+                        placeholder="e.g. £300 + fees"
+                      />
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <label className="text-xs font-semibold text-green-500 uppercase">{formData.rightSideTitle || 'NUvisa'}</label>
+                      <input
+                        type="text"
+                        value={cRightItem.value || ''}
+                        onChange={(e) => updateItemRow(index, 'rightValue', e.target.value)}
+                        className="w-full px-3 py-2 border border-green-200 bg-green-50 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900"
+                        placeholder="e.g. Flat £200"
+                      />
+                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
 

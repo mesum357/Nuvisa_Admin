@@ -284,6 +284,11 @@ export interface UpdateVisaPricingData {
   showReason?: boolean;
 }
 
+export interface ComparisonItem {
+  feature: string;
+  value: string;
+}
+
 export interface ComparisonSection {
   id: string;
   title: string;
@@ -291,8 +296,8 @@ export interface ComparisonSection {
   rightSideTitle: string;
   leftSideImage?: string | null;
   rightSideImage?: string | null;
-  leftSideItems: string[];
-  rightSideItems: string[];
+  leftSideItems: ComparisonItem[] | string[];
+  rightSideItems: ComparisonItem[] | string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -305,8 +310,8 @@ export interface CreateComparisonSectionData {
   rightSideTitle: string;
   leftSideImage?: string;
   rightSideImage?: string;
-  leftSideItems: string[];
-  rightSideItems: string[];
+  leftSideItems: ComparisonItem[] | string[];
+  rightSideItems: ComparisonItem[] | string[];
   isActive?: boolean;
 }
 
@@ -316,7 +321,7 @@ export interface UpdateComparisonSectionData {
   rightSideTitle?: string;
   leftSideImage?: string;
   rightSideImage?: string;
-  leftSideItems?: string[];
-  rightSideItems?: string[];
+  leftSideItems?: ComparisonItem[] | string[];
+  rightSideItems?: ComparisonItem[] | string[];
   isActive?: boolean;
 }
