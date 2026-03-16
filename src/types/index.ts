@@ -311,6 +311,7 @@ export interface ComparisonSection {
   detailSections?: { title: string; items: string[] }[] | null;
   experienceType?: 'IMAGES' | 'TASKS' | null;
   experienceItems?: any | null;
+  experienceTitle?: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -331,6 +332,7 @@ export interface CreateComparisonSectionData {
   detailSections?: { title: string; items: string[] }[];
   experienceType?: 'IMAGES' | 'TASKS';
   experienceItems?: any;
+  experienceTitle?: string;
   isActive?: boolean;
 }
 
@@ -348,5 +350,6 @@ export interface UpdateComparisonSectionData {
   detailSections?: { title: string; items: string[] }[];
   experienceType?: 'IMAGES' | 'TASKS';
   experienceItems?: any;
+  experienceTitle?: string;
   isActive?: boolean;
 }
