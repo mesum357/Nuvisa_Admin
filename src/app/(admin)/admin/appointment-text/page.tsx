@@ -18,7 +18,7 @@ type AppointmentText = {
 // All countries from the frontend (18 countries)
 const ALL_COUNTRIES = [
   "Germany",
-  "Netherlands", 
+  "Netherlands",
   "Belgium",
   "France",
   "Italy",
@@ -64,7 +64,7 @@ export default function AppointmentTextPage() {
       const res = await apiClient.get<{ success: boolean; data: AppointmentText[] }>("/appointment-text");
       if (res?.success && Array.isArray(res.data)) {
         setAppointmentTexts(res.data);
-        
+
         // Initialize form data with existing values
         const initialFormData: { [key: string]: string } = {};
         const initialImageData: { [key: string]: string | null } = {};
@@ -74,7 +74,7 @@ export default function AppointmentTextPage() {
         });
         setFormData(initialFormData);
         setImageData(initialImageData);
-        
+
         // Get section content from first record (all should have same section content)
         if (res.data.length > 0) {
           setSectionContent({
@@ -95,7 +95,7 @@ export default function AppointmentTextPage() {
 
   const handleSave = async (countryName: string) => {
     const appointmentText = formData[countryName]?.trim();
-    
+
     if (!appointmentText) {
       alert("Appointment text cannot be empty");
       return;
@@ -108,7 +108,7 @@ export default function AppointmentTextPage() {
         appointmentText,
         image: imageData[countryName] || null,
       });
-      
+
       await fetchAppointmentTexts();
       setEditingCountry(null);
     } catch (error) {
@@ -159,7 +159,7 @@ export default function AppointmentTextPage() {
     setSaving(true);
     try {
       let imagePath = null;
-      
+
       // Upload image if provided
       if (newCountry.image) {
         const formData = new FormData();
@@ -179,7 +179,7 @@ export default function AppointmentTextPage() {
         appointmentText: newCountry.appointmentText.trim(),
         image: imagePath,
       });
-      
+
       await fetchAppointmentTexts();
       setShowAddCountry(false);
       setNewCountry({
@@ -245,7 +245,7 @@ export default function AppointmentTextPage() {
         sectionTitle: sectionContent.title,
         sectionDescription: sectionContent.description,
       });
-      
+
       await fetchAppointmentTexts();
       setEditingSection(false);
       alert("Section content updated successfully!");
@@ -326,15 +326,15 @@ export default function AppointmentTextPage() {
 
           {editingSection && (
             <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <Button 
-                onClick={handleSaveSectionContent} 
+              <Button
+                onClick={handleSaveSectionContent}
                 disabled={saving}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </Button>
-              <Button 
-                onClick={() => setEditingSection(false)} 
+              <Button
+                onClick={() => setEditingSection(false)}
                 disabled={saving}
                 variant="outline"
               >
@@ -350,8 +350,8 @@ export default function AppointmentTextPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Country Appointment Texts</h2>
-          <Button 
-            onClick={() => setShowAddCountry(true)} 
+          <Button
+            onClick={() => setShowAddCountry(true)}
             disabled={saving || showAddCountry}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
@@ -426,14 +426,14 @@ export default function AppointmentTextPage() {
                 </div>
               </div>
               <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <Button 
-                  onClick={handleAddCountry} 
+                <Button
+                  onClick={handleAddCountry}
                   disabled={saving || uploadingImage}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   {saving ? 'Adding...' : 'Add Country'}
                 </Button>
-                <Button 
+                <Button
                   onClick={() => {
                     setShowAddCountry(false);
                     setNewCountry({
@@ -442,7 +442,7 @@ export default function AppointmentTextPage() {
                       image: null,
                       imagePreview: null,
                     });
-                  }} 
+                  }}
                   disabled={saving}
                   variant="outline"
                 >
@@ -456,121 +456,120 @@ export default function AppointmentTextPage() {
         {loading ? (
           <div className="animate-pulse text-gray-500 dark:text-gray-400">Loading appointment texts...</div>
         ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {getAllCountries().map((countryName) => {
-            const isEditing = editingCountry === countryName;
-            const currentText = getAppointmentTextForCountry(countryName);
-            const countryImage = getImageForCountry(countryName);
-            const hasCustom = hasCustomText(countryName);
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {getAllCountries().map((countryName) => {
+              const isEditing = editingCountry === countryName;
+              const currentText = getAppointmentTextForCountry(countryName);
+              const countryImage = getImageForCountry(countryName);
+              const hasCustom = hasCustomText(countryName);
 
-            return (
-              <div 
-                key={countryName} 
-                className={`rounded-lg border p-4 space-y-3 ${
-                  hasCustom 
-                    ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20' 
-                    : 'border-gray-200 dark:border-gray-800'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900 dark:text-white">{countryName}</h3>
-                  {hasCustom && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200">
-                      Custom
-                    </span>
-                  )}
-                </div>
-
-                {countryImage && (
-                  <div className="w-full h-32 rounded-md overflow-hidden">
-                    <img
-                      src={countryImage}
-                      alt={countryName}
-                      className="w-full h-full object-cover"
-                    />
+              return (
+                <div
+                  key={countryName}
+                  className={`rounded-lg border p-4 space-y-3 ${hasCustom
+                      ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-gray-800'
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{countryName}</h3>
+                    {hasCustom && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200">
+                        Custom
+                      </span>
+                    )}
                   </div>
-                )}
 
-                {isEditing ? (
-                  <div className="space-y-2">
-                    <textarea
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-3 py-2 text-sm"
-                      value={formData[countryName] || currentText}
-                      onChange={(e) => setFormData(prev => ({ ...prev, [countryName]: e.target.value }))}
-                      rows={3}
-                      placeholder="Enter appointment text..."
-                    />
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Country Image
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleImageUpload(countryName, file);
-                          }
-                        }}
-                        className="block w-full text-xs text-gray-500 dark:text-gray-400
+                  {countryImage && (
+                    <div className="w-full h-32 rounded-md overflow-hidden">
+                      <img
+                        src={countryImage}
+                        alt={countryName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <textarea
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-transparent px-3 py-2 text-sm"
+                        value={formData[countryName] || currentText}
+                        onChange={(e) => setFormData(prev => ({ ...prev, [countryName]: e.target.value }))}
+                        rows={3}
+                        placeholder="Enter appointment text..."
+                      />
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Country Image
+                        </label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleImageUpload(countryName, file);
+                            }
+                          }}
+                          className="block w-full text-xs text-gray-500 dark:text-gray-400
                           file:mr-2 file:py-1 file:px-2
                           file:rounded file:border-0
                           file:text-xs file:font-semibold
                           file:bg-blue-50 file:text-blue-700
                           hover:file:bg-blue-100
                           dark:file:bg-blue-900 dark:file:text-blue-200"
-                        disabled={saving || uploadingImage}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleSave(countryName)} 
-                        disabled={saving || uploadingImage}
-                      >
-                        Save
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => setEditingCountry(null)} 
-                        disabled={saving}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                      {currentText}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => setEditingCountry(countryName)} 
-                        disabled={saving}
-                      >
-                        Edit
-                      </Button>
-                      {hasCustom && (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => handleDelete(countryName)} 
+                          disabled={saving || uploadingImage}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleSave(countryName)}
+                          disabled={saving || uploadingImage}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingCountry(null)}
                           disabled={saving}
                         >
-                          Delete
+                          Cancel
                         </Button>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                        {currentText}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => setEditingCountry(countryName)}
+                          disabled={saving}
+                        >
+                          Edit
+                        </Button>
+                        {hasCustom && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(countryName)}
+                            disabled={saving}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
 
         <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">

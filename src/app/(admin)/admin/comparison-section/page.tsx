@@ -26,6 +26,7 @@ export default function ComparisonSectionPage() {
     detailSections: [{ title: 'DETAILS', items: [''] }],
     experienceType: 'IMAGES',
     experienceItems: { leftImage: '', rightImage: '' },
+    experienceTitle: 'THE EXPERIENCE',
     comparisonColumns: ['Traditional Agency', 'NUvisa'],
     comparisonRows: [{ feature: '', values: ['', ''], tooltip: '' }],
     isActive: true,
@@ -123,6 +124,7 @@ export default function ComparisonSectionPage() {
       detailSections: [{ title: 'DETAILS', items: [''] }],
       experienceType: 'IMAGES',
       experienceItems: { leftImage: '', rightImage: '' },
+      experienceTitle: 'THE EXPERIENCE',
       comparisonColumns: ['Traditional Agency', 'NUvisa'],
       comparisonRows: [{ feature: '', values: ['', ''], tooltip: '' }],
       isActive: true,
@@ -148,6 +150,7 @@ export default function ComparisonSectionPage() {
       detailSections: section.detailSections || [{ title: 'DETAILS', items: [] }],
       experienceType: (section.experienceType as 'IMAGES' | 'TASKS') || 'IMAGES',
       experienceItems: section.experienceItems || (section.experienceType === 'TASKS' ? [] : { leftImage: '', rightImage: '' }),
+      experienceTitle: section.experienceTitle || 'THE EXPERIENCE',
       comparisonColumns: section.comparisonColumns || ['Traditional Agency', 'NUvisa'],
       comparisonRows: section.comparisonRows || [{ feature: '', values: ['', ''], tooltip: '' }],
       isActive: section.isActive,
@@ -357,11 +360,21 @@ export default function ComparisonSectionPage() {
         ? { ...prev.experienceItems }
         : { leftImage: '', rightImage: '' };
 
-      if (side === 'left') newItems.leftImage = url;
-      else newItems.rightImage = url;
-
-      return { ...prev, experienceItems: newItems };
+      if (side === 'left') {
+        newItems.leftImage = url;
+        return { ...prev, experienceItems: newItems, leftSideImage: url };
+      } else {
+        newItems.rightImage = url;
+        return { ...prev, experienceItems: newItems, rightSideImage: url };
+      }
     });
+  };
+
+  const updateExperienceTitle = (side: 'left' | 'right', title: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [side === 'left' ? 'leftSideTitle' : 'rightSideTitle']: title
+    }));
   };
 
   if (loading) {
@@ -773,8 +786,20 @@ export default function ComparisonSectionPage() {
               </div>
             </div>
 
-            <div className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm">
-              {formData.experienceType === 'TASKS' ? (
+            <div className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm space-y-6">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase">Experience Section Title</label>
+                <input
+                  type="text"
+                  value={formData.experienceTitle}
+                  onChange={(e) => setFormData(prev => ({ ...prev, experienceTitle: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold"
+                  placeholder="e.g. THE EXPERIENCE"
+                />
+              </div>
+
+              <div className="border-t border-gray-100 pt-6">
+                {formData.experienceType === 'TASKS' ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-gray-700">Experience Tasks</h4>
@@ -809,29 +834,54 @@ export default function ComparisonSectionPage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Left Side Image URL</label>
-                    <input
-                      type="text"
-                      value={(formData.experienceItems as any)?.leftImage || ''}
-                      onChange={(e) => updateExperienceImage('left', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      placeholder="https://..."
-                    />
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Left Side Title</label>
+                        <input
+                          type="text"
+                          value={formData.leftSideTitle}
+                          onChange={(e) => updateExperienceTitle('left', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="Traditional Agency"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Right Side Title</label>
+                        <input
+                          type="text"
+                          value={formData.rightSideTitle}
+                          onChange={(e) => updateExperienceTitle('right', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="NUvisa"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Left Side Image URL</label>
+                        <input
+                          type="text"
+                          value={(formData.experienceItems as any)?.leftImage || ''}
+                          onChange={(e) => updateExperienceImage('left', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="https://..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Right Side Image URL</label>
+                        <input
+                          type="text"
+                          value={(formData.experienceItems as any)?.rightImage || ''}
+                          onChange={(e) => updateExperienceImage('right', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">Right Side Image URL</label>
-                    <input
-                      type="text"
-                      value={(formData.experienceItems as any)?.rightImage || ''}
-                      onChange={(e) => updateExperienceImage('right', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      placeholder="https://..."
-                    />
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 

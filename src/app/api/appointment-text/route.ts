@@ -12,7 +12,8 @@ function getCorsHeaders(request: NextRequest) {
     'https://www.nuvisa.co.uk',
     'https://nuvisa.co.uk',
     'http://localhost:3000',
-    'http://localhost:3001'
+    'http://localhost:3001',
+    'http://localhost:3002'
   ];
   
   // Add any additional origins from environment variable
