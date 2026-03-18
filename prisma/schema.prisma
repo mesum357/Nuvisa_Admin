@@ -272,6 +272,7 @@ model ComparisonSection {
   comparisonColumns Json?    // Array of column titles: string[]
   comparisonRows    Json?    // Array of { feature: string, values: string[], tooltip?: string }
   tooltip           String?
+  countryName       String?
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -433,4 +434,31 @@ model PopupContent {
   questions              PopupQuestion[]
 
   @@map("popup_content")
+}
+
+model CountrySection {
+  id          String   @id @default(uuid())
+  title       String   @default("Choose Your Country")
+  description String   @default("We support 20 countries over all the visa centres in the UK")
+  countries   Json     // Array of { name: string, image: string, appointmentText: string }
+  isActive    Boolean  @default(true)
+  countryName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@map("country_sections")
+}
+
+model RecommendedSection {
+  id          BigInt   @id @default(autoincrement())
+  title       String   @default("Recommended for you")
+  description String?
+  cards       Json     // Array of { title: string, description: string, image: string, price: string, strikeOutPrice: string }
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@map("recommended_sections")
 }

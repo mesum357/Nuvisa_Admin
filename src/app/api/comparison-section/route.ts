@@ -1,3 +1,4 @@
+// Comparison Section API Route
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
@@ -5,13 +6,16 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const path = searchParams.get('path') || 'active';
-
     let data;
 
     if (path === 'active') {
-      // Get active comparison section
+      // Get active comparison section, optionally filtered by country
+      const country = searchParams.get('country');
       data = await prisma.comparisonSection.findFirst({
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          ...(country ? { countryName: country } : {})
+        },
         orderBy: { updatedAt: 'desc' }
       });
     } else if (path === 'all') {
@@ -64,6 +68,7 @@ export async function POST(request: NextRequest) {
         comparisonColumns: body.comparisonColumns || null,
         comparisonRows: body.comparisonRows || null,
         tooltip: body.tooltip || null,
+        countryName: body.countryName || null,
         isActive: body.isActive !== undefined ? body.isActive : true,
         updatedBy: body.updatedBy || null
       }
@@ -135,6 +140,7 @@ export async function PATCH(request: NextRequest) {
           comparisonColumns: body.comparisonColumns,
           comparisonRows: body.comparisonRows,
           tooltip: body.tooltip,
+          countryName: body.countryName,
           isActive: body.isActive,
           updatedBy: body.updatedBy
         }
