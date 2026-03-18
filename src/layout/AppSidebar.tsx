@@ -59,6 +59,11 @@ const baseNavItems: NavItem[] = [
   },
   {
     icon: <PageIcon />,
+    name: "Country Section",
+    path: "/admin/country-section",
+  },
+  {
+    icon: <PageIcon />,
     name: "Comparison Section",
     path: "/admin/comparison-section",
   },
@@ -112,6 +117,11 @@ const baseNavItems: NavItem[] = [
     name: "Popup Content",
     path: "/admin/popup-content",
   },
+  {
+    icon: <PageIcon />,
+    name: "Recommended Section",
+    path: "/admin/recommended-section",
+  },
 ];
 
 const othersItems: NavItem[] = [];
@@ -130,6 +140,7 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/admins')) return can('users', 'read');
       if (item.path.startsWith('/admin/appointment-text')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/faqs')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/country-section')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/comparison-section')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/visa-pricing')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/header-content')) return can('siteContent', 'read');
@@ -142,6 +153,7 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/roles')) return can('roles', 'read');
       if (item.path.startsWith('/admin/popup-submissions')) return can('users', 'read');
       if (item.path.startsWith('/admin/popup-content')) return can('users', 'read');
+      if (item.path.startsWith('/admin/recommended-section')) return can('siteContent', 'read');
       return true;
     });
   }, [can]);

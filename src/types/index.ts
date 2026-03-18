@@ -312,6 +312,7 @@ export interface ComparisonSection {
   experienceType?: 'IMAGES' | 'TASKS' | null;
   experienceItems?: any | null;
   experienceTitle?: string | null;
+  countryName?: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -333,6 +334,7 @@ export interface CreateComparisonSectionData {
   experienceType?: 'IMAGES' | 'TASKS';
   experienceItems?: any;
   experienceTitle?: string;
+  countryName?: string;
   isActive?: boolean;
 }
 
@@ -351,5 +353,68 @@ export interface UpdateComparisonSectionData {
   experienceType?: 'IMAGES' | 'TASKS';
   experienceItems?: any;
   experienceTitle?: string;
+  countryName?: string;
+  isActive?: boolean;
+}
+
+export interface CountrySectionCountry {
+  name: string;
+  image: string;
+  landmark?: string;
+  appointmentText: string;
+}
+
+export interface CountrySection {
+  id: string;
+  title: string;
+  description: string;
+  countries: CountrySectionCountry[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
+export interface CreateCountrySectionData {
+  title: string;
+  description: string;
+  countries: CountrySectionCountry[];
+  isActive?: boolean;
+}
+
+export interface UpdateCountrySectionData {
+  isActive?: boolean;
+}
+
+export interface RecommendedSectionCard {
+  title: string;
+  description: string;
+  image: string;
+  price?: string;
+  strikeOutPrice?: string;
+}
+
+export interface RecommendedSection {
+  id: string; // BigInt converted to string for JSON
+  title: string;
+  description?: string | null;
+  cards: RecommendedSectionCard[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
+export interface CreateRecommendedSectionData {
+  title: string;
+  description?: string;
+  cards: RecommendedSectionCard[];
+  isActive?: boolean;
+}
+
+export interface UpdateRecommendedSectionData {
+  title?: string;
+  description?: string;
+  cards?: RecommendedSectionCard[];
   isActive?: boolean;
 }

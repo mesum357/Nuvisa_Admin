@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Edit2, Eye, EyeOff, Loader2, Plus, Save, X } from 'lucide-react';
+import { Edit2, Eye, EyeOff, Loader2, Plus, Save, Trash2, X } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { ComparisonSection, CreateComparisonSectionData, UpdateComparisonSectionData, ComparisonItem } from '@/types';
 import ComponentCard from '@/components/common/ComponentCard';
@@ -9,13 +9,14 @@ import Button from '@/components/ui/button/Button';
 import { Modal } from '@/components/ui/modal';
 
 export default function ComparisonSectionPage() {
-  const [comparisonSection, setComparisonSection] = useState<ComparisonSection | null>(null);
+  const [comparisonSections, setComparisonSections] = useState<ComparisonSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingSection, setEditingSection] = useState<ComparisonSection | null>(null);
   const [formData, setFormData] = useState<CreateComparisonSectionData>({
     title: '',
+    countryName: '',
     tooltip: "",
     leftSideTitle: '',
     rightSideTitle: '',
@@ -33,18 +34,18 @@ export default function ComparisonSectionPage() {
   });
 
   useEffect(() => {
-    fetchComparisonSection();
+    fetchComparisonSections();
   }, []);
 
-  const fetchComparisonSection = async () => {
+  const fetchComparisonSections = async () => {
     setLoading(true);
     try {
-      const response = await apiClient.get<ComparisonSection>('/comparison-section?path=active');
+      const response = await apiClient.get<ComparisonSection[]>('/comparison-section?path=all');
       if (response.success && response.data) {
-        setComparisonSection(response.data);
+        setComparisonSections(response.data);
       }
     } catch (error) {
-      console.error('Error fetching comparison section:', error);
+      console.error('Error fetching comparison sections:', error);
     } finally {
       setLoading(false);
     }
@@ -55,11 +56,9 @@ export default function ComparisonSectionPage() {
     try {
       const response = await apiClient.post<ComparisonSection>('/comparison-section', formData);
       if (response.success && response.data) {
-        setComparisonSection(response.data);
         setShowModal(false);
         resetForm();
-        // Re-fetch to ensure we have the latest data
-        await fetchComparisonSection();
+        await fetchComparisonSections();
       }
     } catch (error) {
       console.error('Error creating comparison section:', error);
@@ -78,12 +77,10 @@ export default function ComparisonSectionPage() {
         formData
       );
       if (response.success && response.data) {
-        setComparisonSection(response.data);
         setShowModal(false);
         setEditingSection(null);
         resetForm();
-        // Re-fetch to ensure we have the latest data
-        await fetchComparisonSection();
+        await fetchComparisonSections();
       }
     } catch (error) {
       console.error('Error updating comparison section:', error);
@@ -92,18 +89,14 @@ export default function ComparisonSectionPage() {
     }
   };
 
-  const handleToggleActive = async () => {
-    if (!comparisonSection) return;
-
+  const handleToggleActive = async (id: string) => {
     setSaving(true);
     try {
       const response = await apiClient.patch<ComparisonSection>(
-        `/comparison-section?id=${comparisonSection.id}&action=toggle`
+        `/comparison-section?id=${id}&action=toggle`
       );
       if (response.success && response.data) {
-        setComparisonSection(response.data);
-        // Re-fetch to ensure we have the latest data
-        await fetchComparisonSection();
+        await fetchComparisonSections();
       }
     } catch (error) {
       console.error('Error toggling comparison section:', error);
@@ -111,9 +104,26 @@ export default function ComparisonSectionPage() {
       setSaving(false);
     }
   };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this comparison section?')) return;
+
+    setSaving(true);
+    try {
+      const response = await apiClient.delete(`/comparison-section?id=${id}`);
+      if (response.success) {
+        await fetchComparisonSections();
+      }
+    } catch (error) {
+      console.error('Error deleting comparison section:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
   const resetForm = () => {
     setFormData({
       title: '',
+      countryName: '',
       tooltip: '',
       leftSideTitle: '',
       rightSideTitle: '',
@@ -140,6 +150,7 @@ export default function ComparisonSectionPage() {
     setEditingSection(section);
     setFormData({
       title: section.title,
+      countryName: section.countryName || '',
       tooltip: section.tooltip || '',
       leftSideTitle: section.leftSideTitle,
       rightSideTitle: section.rightSideTitle,
@@ -388,107 +399,89 @@ export default function ComparisonSectionPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Comparison Points Management</h1>
-        <div className="flex gap-2">
-          {comparisonSection && (
-            <Button
-              onClick={handleToggleActive}
-              disabled={saving}
-              variant={comparisonSection.isActive ? "outline" : "primary"}
-              size="sm"
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : comparisonSection.isActive ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-              {comparisonSection.isActive ? 'Deactivate' : 'Activate'}
-            </Button>
-          )}
-          <Button onClick={openCreateModal} size="sm">
-            <Plus className="h-4 w-4" />
-            {comparisonSection ? 'Edit Points' : 'Create Points'}
-          </Button>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Comparison Sections Management</h1>
+        <Button onClick={openCreateModal} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Create New Section
+        </Button>
       </div>
 
-      {comparisonSection ? (
-        <div className="space-y-6">
-          {/* Status Header */}
-          <ComponentCard title="Comparison Points Status" desc={`Last updated: ${comparisonSection.updatedAt ? new Date(comparisonSection.updatedAt).toLocaleDateString() : 'Unknown'}`}>
-            <div className="flex justify-between items-center">
-              <div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${comparisonSection.isActive
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-800'
-                  }`}>
-                  {comparisonSection.isActive ? 'Active' : 'Inactive'}
-                </span>
-                <Button
-                  onClick={() => openEditModal(comparisonSection)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Edit2 className="h-4 w-4" />
-                  Edit Points
-                </Button>
-              </div>
-            </div>
-          </ComponentCard>
-
-          {/* Comparison Points Display */}
-          <ComponentCard title="Comparison Points">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-6 py-3 font-semibold">Feature</th>
-                    {(comparisonSection.comparisonColumns || []).map((col, idx) => (
-                      <th key={idx} className={`px-6 py-3 font-semibold border-l ${idx === 0 ? 'text-[#6F48FF]' : 'text-gray-600'}`}>
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(comparisonSection.comparisonRows || []).map((row, rIdx) => (
-                    <tr key={rIdx} className="bg-white border-b hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-900 border-r">{row.feature}</td>
-                      {row.values.map((val, cIdx) => (
-                        <td key={cIdx} className={`px-6 py-4 border-r ${cIdx === 0 ? 'text-[#6F48FF] font-bold' : 'text-gray-600'}`}>
-                          {val}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                  {(!comparisonSection.comparisonRows || comparisonSection.comparisonRows.length === 0) && (
-                    <tr>
-                      <td colSpan={(comparisonSection.comparisonColumns?.length || 0) + 1} className="px-6 py-4 text-center text-gray-500">
-                        No comparison points available. Start by adding columns and rows below.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-
-              </table>
-            </div>
-          </ComponentCard>
+      <ComponentCard title="All Comparison Sections" desc="Manage country-specific comparison data">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b">
+              <tr>
+                <th className="px-6 py-3 font-semibold">Country</th>
+                <th className="px-6 py-3 font-semibold">Title</th>
+                <th className="px-6 py-3 font-semibold">Status</th>
+                <th className="px-6 py-3 font-semibold">Last Updated</th>
+                <th className="px-6 py-3 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {comparisonSections.map((section) => (
+                <tr key={section.id} className="bg-white hover:bg-gray-50">
+                  <td className="px-6 py-4 font-medium text-gray-900">
+                    {section.countryName || <span className="text-gray-400 italic">Default / General</span>}
+                  </td>
+                  <td className="px-6 py-4 text-gray-600">
+                    {section.title}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${section.isActive
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                      }`}>
+                      {section.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-gray-500 text-xs">
+                    {section.updatedAt ? new Date(section.updatedAt).toLocaleDateString() : 'Unknown'}
+                  </td>
+                  <td className=" text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        onClick={() => handleToggleActive(section.id)}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 px-0"
+                        title={section.isActive ? 'Deactivate' : 'Activate'}
+                      >
+                        {section.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        onClick={() => openEditModal(section)}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 px-0"
+                        title="Edit"
+                      >
+                        <Edit2 color='black' className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        onClick={() => handleDelete(section.id)}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 px-0  text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {comparisonSections.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500 italic">
+                    No comparison sections found. Click "Create New Section" to get started.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      ) : (
-        <ComponentCard title="No Comparison Section">
-          <div className="text-center py-8">
-            <p className="text-gray-500 mb-4">No comparison section found</p>
-            <Button onClick={openCreateModal}>
-              <Plus className="h-4 w-4" />
-              Create Comparison Section
-            </Button>
-          </div>
-        </ComponentCard>
-      )}
+      </ComponentCard>
 
       <Modal
         isOpen={showModal}
@@ -534,6 +527,16 @@ export default function ComparisonSectionPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-500 uppercase">Country Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={formData.countryName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, countryName: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="e.g. France, Germany, or 'Default'"
+                />
+              </div>
+              <div className="space-y-1">
                 <label className="text-xs font-semibold text-gray-500 uppercase">Main Title <span className="text-red-500">*</span></label>
                 <input
                   type="text"
@@ -543,7 +546,7 @@ export default function ComparisonSectionPage() {
                   placeholder="e.g. Why Choose NUvisa?"
                 />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 md:col-span-2">
                 <label className="text-xs font-semibold text-blue-500 uppercase">Tooltip (Optional)</label>
                 <input
                   type="text"
@@ -800,40 +803,40 @@ export default function ComparisonSectionPage() {
 
               <div className="border-t border-gray-100 pt-6">
                 {formData.experienceType === 'TASKS' ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-gray-700">Experience Tasks</h4>
-                    <Button
-                      onClick={addExperienceTask}
-                      size="sm"
-                      variant="outline"
-                      className="border-orange-200 text-orange-600 hover:bg-orange-50"
-                    >
-                      <Plus className="h-4 w-4" /> Add Task
-                    </Button>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-gray-700">Experience Tasks</h4>
+                      <Button
+                        onClick={addExperienceTask}
+                        size="sm"
+                        variant="outline"
+                        className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                      >
+                        <Plus className="h-4 w-4" /> Add Task
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {(Array.isArray(formData.experienceItems) ? formData.experienceItems : []).map((task, index) => (
+                        <div key={index} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={task}
+                            onChange={(e) => updateExperienceTaskValue(index, e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder="Experience task item..."
+                          />
+                          <Button
+                            onClick={() => removeExperienceTask(index)}
+                            variant="outline"
+                            className="text-red-400 hover:text-red-600 border-none shadow-none"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {(Array.isArray(formData.experienceItems) ? formData.experienceItems : []).map((task, index) => (
-                      <div key={index} className="flex gap-2">
-                        <input
-                          type="text"
-                          value={task}
-                          onChange={(e) => updateExperienceTaskValue(index, e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          placeholder="Experience task item..."
-                        />
-                        <Button
-                          onClick={() => removeExperienceTask(index)}
-                          variant="outline"
-                          className="text-red-400 hover:text-red-600 border-none shadow-none"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
+                ) : (
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
