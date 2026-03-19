@@ -74,6 +74,11 @@ const baseNavItems: NavItem[] = [
   },
   {
     icon: <PageIcon />,
+    name: "Visa Countries",
+    path: "/admin/visa-countries",
+  },
+  {
+    icon: <PageIcon />,
     name: "Header Content",
     path: "/admin/header-content",
   },
@@ -143,6 +148,7 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/country-section')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/comparison-section')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/visa-pricing')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/visa-countries')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/header-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/footer-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/slider-content')) return can('siteContent', 'read');

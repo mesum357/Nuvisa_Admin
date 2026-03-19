@@ -462,3 +462,15 @@ model RecommendedSection {
 
   @@map("recommended_sections")
 }
+
+model VisaCountry {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  image          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime? @default(now())
+  updatedAt      DateTime? @updatedAt
+
+  @@map("visa_country")
+}
+
