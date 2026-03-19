@@ -418,3 +418,23 @@ export interface UpdateRecommendedSectionData {
   cards?: RecommendedSectionCard[];
   isActive?: boolean;
 }
+export interface VisaCountry {
+  id: string;
+  name: string;
+  image?: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateVisaCountryData {
+  name: string;
+  image?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateVisaCountryData {
+  name?: string;
+  image?: string;
+  isActive?: boolean;
+}
