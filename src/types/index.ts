@@ -438,3 +438,21 @@ export interface UpdateVisaCountryData {
   image?: string;
   isActive?: boolean;
 }
+
+export interface Occasion {
+  title: string;
+  subTitle: string;
+  img: string;
+  textColor: string;
+}
+
+export interface OccasionContent {
+  id: string;
+  title: string;
+  description: string;
+  occasions: Occasion[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}

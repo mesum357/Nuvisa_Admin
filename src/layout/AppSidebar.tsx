@@ -124,6 +124,11 @@ const baseNavItems: NavItem[] = [
   },
   {
     icon: <PageIcon />,
+    name: "Occasion Content",
+    path: "/admin/occasion-content",
+  },
+  {
+    icon: <PageIcon />,
     name: "Recommended Section",
     path: "/admin/recommended-section",
   },
@@ -159,6 +164,7 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/roles')) return can('roles', 'read');
       if (item.path.startsWith('/admin/popup-submissions')) return can('users', 'read');
       if (item.path.startsWith('/admin/popup-content')) return can('users', 'read');
+      if (item.path.startsWith('/admin/occasion-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/recommended-section')) return can('siteContent', 'read');
       return true;
     });

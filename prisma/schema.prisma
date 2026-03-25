@@ -474,3 +474,16 @@ model VisaCountry {
   @@map("visa_country")
 }
 
+model OccasionContent {
+  id          String   @id @default(uuid())
+  title       String   @default("Everyday Steals")
+  description String   @default("Best deals on flights and hotels")
+  occasions   Json     // Array of { title: string, subTitle: string, img: string, textColor: string }
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@map("occasion_content")
+}
+

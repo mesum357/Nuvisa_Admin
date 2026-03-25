@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { seedComparisonSection } from './seeds/comparison-seed';
 import { seedHeroContent } from './seeds/hero-content';
 import { seedSliderContent } from './seeds/slider-content';
+import { seedOccasionContent } from './seeds/occasion-seed';
 
 const prisma = new PrismaClient();
 
@@ -104,6 +105,9 @@ async function main() {
 
   // Seed slider content
   await seedSliderContent();
+
+  // Seed occasion content
+  await seedOccasionContent();
 
   // Seed default email templates
   const emailTemplatesData = [
