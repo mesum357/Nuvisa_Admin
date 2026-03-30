@@ -20,6 +20,7 @@ export default function VisaCountriesPage() {
   const [formData, setFormData] = useState<CreateVisaCountryData>({
     name: '',
     image: '',
+    price_from: 'From',
     isActive: true,
   });
 
@@ -60,7 +61,7 @@ export default function VisaCountriesPage() {
         await fetchCountries();
         setShowModal(false);
         setEditingCountry(null);
-        setFormData({ name: '', image: '', isActive: true });
+        setFormData({ name: '', image: '', price_from: 'From', isActive: true });
       } else {
         alert(response.error || 'Failed to save country');
       }
@@ -105,6 +106,7 @@ export default function VisaCountriesPage() {
     setFormData({
       name: country.name,
       image: country.image || '',
+      price_from: country.price_from || 'From',
       isActive: country.isActive,
     });
     setShowModal(true);
@@ -150,7 +152,7 @@ export default function VisaCountriesPage() {
         </div>
         <Button onClick={() => {
           setEditingCountry(null);
-          setFormData({ name: '', image: '', isActive: true });
+          setFormData({ name: '', image: '', price_from: 'From', isActive: true });
           setShowModal(true);
         }} size="sm">
           <Plus className="h-4 w-4" />
@@ -183,7 +185,11 @@ export default function VisaCountriesPage() {
               </div>
             </div>
             <div className="p-4">
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-4">{country.name}</h3>
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white">{country.name}</h3>
+              {country.price_from && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{country.price_from}</p>
+              )}
+              {!country.price_from && <div className="mb-4" />}
               <div className="flex justify-between items-center">
                 <div className="flex gap-2">
                   <button onClick={() => handleEdit(country)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
@@ -233,6 +239,17 @@ export default function VisaCountriesPage() {
                   className="text-sm"
                 />
               </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Price From</label>
+              <input
+                type="text"
+                placeholder="e.g. From £99"
+                value={formData.price_from || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, price_from: e.target.value }))}
+                className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-700"
+              />
             </div>
 
             <div className="flex items-center gap-2">

@@ -132,6 +132,11 @@ const baseNavItems: NavItem[] = [
     name: "Recommended Section",
     path: "/admin/recommended-section",
   },
+  {
+    icon: <PageIcon />,
+    name: "Expert Section",
+    path: "/admin/expert-section",
+  },
 ];
 
 const othersItems: NavItem[] = [];
@@ -166,6 +171,7 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/popup-content')) return can('users', 'read');
       if (item.path.startsWith('/admin/occasion-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/recommended-section')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/expert-section')) return can('siteContent', 'read');
       return true;
     });
   }, [can]);
