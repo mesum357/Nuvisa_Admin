@@ -425,17 +425,20 @@ export interface VisaCountry {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  price_from: string;
 }
 
 export interface CreateVisaCountryData {
   name: string;
   image?: string;
+  price_from: string;
   isActive?: boolean;
 }
 
 export interface UpdateVisaCountryData {
   name?: string;
   image?: string;
+  price_from?: string;
   isActive?: boolean;
 }
 
@@ -455,4 +458,44 @@ export interface OccasionContent {
   createdAt: Date;
   updatedAt: Date;
   updatedBy?: string | null;
+}
+
+export interface ExpertSectionType {
+  id: string;
+  titleLine1: string;
+  titleLine2: string;
+  titleLine3: string;
+  originalPrice: string;
+  offerPrice: string;
+  offerDescription: string;
+  expertImage: string;
+  defaultSpotsLeft: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  updatedBy?: string | null;
+}
+
+export interface CreateExpertSectionData {
+  titleLine1: string;
+  titleLine2: string;
+  titleLine3: string;
+  originalPrice: string;
+  offerPrice: string;
+  offerDescription: string;
+  expertImage: string;
+  defaultSpotsLeft: number;
+  isActive?: boolean;
+}
+
+export interface UpdateExpertSectionData {
+  titleLine1?: string;
+  titleLine2?: string;
+  titleLine3?: string;
+  originalPrice?: string;
+  offerPrice?: string;
+  offerDescription?: string;
+  expertImage?: string;
+  defaultSpotsLeft?: number;
+  isActive?: boolean;
 }

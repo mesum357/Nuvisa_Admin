@@ -470,7 +470,7 @@ model VisaCountry {
   isActive       Boolean  @default(true)
   createdAt      DateTime? @default(now())
   updatedAt      DateTime? @updatedAt
-
+  price_from     String? @default("From")
   @@map("visa_country")
 }
 
@@ -487,3 +487,20 @@ model OccasionContent {
   @@map("occasion_content")
 }
 
+model ExpertSection {
+  id                String   @id @default(uuid())
+  titleLine1        String   @default("Unlock Your Visa Success with")
+  titleLine2        String   @default("Unlimited Access to a")
+  titleLine3        String   @default("Accountability Expert")
+  originalPrice     String   @default("£35/ Month")
+  offerPrice        String   @default("Free")
+  offerDescription  String   @default("with next 100 visa applications!")
+  expertImage       String   @default("/image/expert.png")
+  defaultSpotsLeft  Int      @default(12)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?
+  
+  @@map("expert_sections")
+}
