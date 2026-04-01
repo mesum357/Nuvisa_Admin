@@ -9,6 +9,7 @@ interface Occasion {
   subTitle: string;
   img: string;
   textColor: string;
+  bgColor: string;
 }
 
 interface OccasionContent {
@@ -20,12 +21,12 @@ interface OccasionContent {
 }
 
 const DEFAULT_OCCASIONS: Occasion[] = [
-  { title: "Best snow right now", subTitle: "LAST-MINUTE SKI HOLIDAYS", img: "/image/occ1.jpeg", textColor: "#2d3436" },
-  { title: "April", subTitle: "APRIL SKI HOLIDAYS", img: "/image/occ2.jpeg", textColor: "#ccff00" },
-  { title: "Easter", subTitle: "EASTER SKI HOLIDAYS", img: "/image/occ3.jpeg", textColor: "#5d3fd3" },
-  { title: "Xmas 26", subTitle: "CHRISTMAS SKI HOLIDAYS", img: "/image/occ4.jpeg", textColor: "#ffffff" },
-  { title: "New Year 26", subTitle: "NEW YEAR SKI HOLIDAYS", img: "/image/occ5.jpeg", textColor: "#00a8ff" },
-  { title: "Half Term 27", subTitle: "HALF TERM SKI HOLIDAYS", img: "/image/occ6.jpeg", textColor: "#f1c40f" },
+  { title: "Best snow right now", subTitle: "LAST-MINUTE SKI HOLIDAYS", img: "/image/occ1.jpeg", textColor: "#2d3436", bgColor: "#ffffff" },
+  { title: "April", subTitle: "APRIL SKI HOLIDAYS", img: "/image/occ2.jpeg", textColor: "#ccff00", bgColor: "#ffffff" },
+  { title: "Easter", subTitle: "EASTER SKI HOLIDAYS", img: "/image/occ3.jpeg", textColor: "#5d3fd3", bgColor: "#ffffff" },
+  { title: "Xmas 26", subTitle: "CHRISTMAS SKI HOLIDAYS", img: "/image/occ4.jpeg", textColor: "#ffffff", bgColor: "#ffffff" },
+  { title: "New Year 26", subTitle: "NEW YEAR SKI HOLIDAYS", img: "/image/occ5.jpeg", textColor: "#00a8ff", bgColor: "#ffffff" },
+  { title: "Half Term 27", subTitle: "HALF TERM SKI HOLIDAYS", img: "/image/occ6.jpeg", textColor: "#f1c40f", bgColor: "#ffffff" },
 ];
 
 export default function OccasionContentPage() {
@@ -95,7 +96,8 @@ export default function OccasionContentPage() {
       title: "New Occasion",
       subTitle: "SUBTITLE HERE",
       img: "/image/occ1.jpeg",
-      textColor: "#ffffff"
+      textColor: "#ffffff",
+      bgColor: "#ffffff"
     };
     setContent({
       ...content,
@@ -225,17 +227,6 @@ export default function OccasionContentPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Image URL
-                  </label>
-                  <input
-                    type="text"
-                    value={occ.img}
-                    onChange={(e) => handleOccasionChange(idx, 'img', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Inside Text Color (Hex)
                   </label>
                   <div className="flex gap-2">
@@ -245,9 +236,26 @@ export default function OccasionContentPage() {
                       onChange={(e) => handleOccasionChange(idx, 'textColor', e.target.value)}
                       className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     />
-                    <div 
+                    <div
                       className="w-10 h-10 rounded border border-gray-300"
                       style={{ backgroundColor: occ.textColor }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Background Color (Hex)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={occ.bgColor}
+                      onChange={(e) => handleOccasionChange(idx, 'bgColor', e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                    <div
+                      className="w-10 h-10 rounded border border-gray-300"
+                      style={{ backgroundColor: occ.bgColor }}
                     />
                   </div>
                 </div>
@@ -255,9 +263,9 @@ export default function OccasionContentPage() {
                 <div className="mt-4 p-4 rounded-lg bg-gray-100 dark:bg-gray-700">
                   <p className="text-xs text-gray-500 mb-2">Live Preview:</p>
                   <div className="flex flex-col gap-1">
-                    <div 
+                    <div
                       className="h-24 rounded-xl flex items-center justify-center p-4 text-center overflow-hidden bg-cover bg-center shadow-inner"
-                      style={{ backgroundImage: `url(${occ.img})` }}
+                      style={{ backgroundColor: occ.bgColor }}
                     >
                       <h4 style={{ color: occ.textColor }} className="text-sm font-bold uppercase drop-shadow-md">
                         {occ.title}
