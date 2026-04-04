@@ -94,6 +94,11 @@ const baseNavItems: NavItem[] = [
   },
   {
     icon: <PageIcon />,
+    name: "General Content",
+    path: "/admin/general-content",
+  },
+  {
+    icon: <PageIcon />,
     name: "Slider Content",
     path: "/admin/slider-content",
   },
@@ -165,6 +170,7 @@ const AppSidebar: React.FC = () => {
       if (item.path.startsWith('/admin/klarna-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/process-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/hero-content')) return can('siteContent', 'read');
+      if (item.path.startsWith('/admin/general-content')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/email-templates')) return can('siteContent', 'read');
       if (item.path.startsWith('/admin/roles')) return can('roles', 'read');
       if (item.path.startsWith('/admin/popup-submissions')) return can('users', 'read');
