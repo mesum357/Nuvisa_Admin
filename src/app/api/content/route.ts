@@ -7,9 +7,9 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // if (!session) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // }
 
     const searchParams = request.nextUrl.searchParams;
     const key = searchParams.get('key');
@@ -50,10 +50,23 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json();
+    const { key, value, type } = data;
 
-    const content = await prisma.siteContent.create({
-      data: {
-        ...data,
+    if (!key) {
+      return NextResponse.json({ error: 'Key is required' }, { status: 400 });
+    }
+
+    const content = await prisma.siteContent.upsert({
+      where: { key },
+      update: {
+        value,
+        type: type || 'text',
+        updatedBy: (session.user as any).id,
+      },
+      create: {
+        key,
+        value,
+        type: type || 'text',
         updatedBy: (session.user as any).id,
       },
     });
@@ -64,7 +77,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (_error) {
     return NextResponse.json(
-      { error: 'Failed to create content' },
+      { error: 'Failed to save content' },
       { status: 500 }
     );
   }
