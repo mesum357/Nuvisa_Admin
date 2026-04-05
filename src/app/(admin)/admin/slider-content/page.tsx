@@ -31,6 +31,8 @@ export default function SliderContentPage() {
   const [slotsLeftKeyExists, setSlotsLeftKeyExists] = useState<boolean>(false);
   const [appointmentReason, setAppointmentReason] = useState<string>("");
   const [appointmentReasonKeyExists, setAppointmentReasonKeyExists] = useState<boolean>(false);
+  const [thirdPriceMessage, setThirdPriceMessage] = useState<string>("");
+  const [thirdPriceMessageKeyExists, setThirdPriceMessageKeyExists] = useState<boolean>(false);
 
   const humanizeKey = (key: string) => {
     if (!key) return '';
@@ -137,6 +139,16 @@ export default function SliderContentPage() {
       } else {
         setAppointmentReason("");
         setAppointmentReasonKeyExists(false);
+      }
+
+      // Initialize dedicated third price message field
+      if (values['third_price_message'] !== undefined) {
+        setThirdPriceMessage(values['third_price_message'] || "");
+        setThirdPriceMessageKeyExists(true);
+      } else {
+        // Fallback to slider_traditional when dedicated key does not exist yet
+        setThirdPriceMessage(values['slider_traditional'] || "");
+        setThirdPriceMessageKeyExists(false);
       }
     }
     setLoading(false);
@@ -379,6 +391,48 @@ export default function SliderContentPage() {
     }
   };
 
+  const handleSaveThirdPriceMessage = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    const trimmed = (thirdPriceMessage || '').trim();
+    if (!trimmed) {
+      alert('Please enter third price message');
+      return;
+    }
+
+    if (saving) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await apiClient.post('/slider-content', {
+        key: 'third_price_message',
+        value: trimmed,
+        type: 'text',
+        section: 'slider',
+        order: 9,
+        isActive: true,
+      });
+
+      if (response && response.success) {
+        await fetchContents();
+        alert('Third price message saved successfully!');
+      } else {
+        const errorMsg = response?.error || response?.details || 'Failed to save third price message. Please try again.';
+        alert(`Error: ${errorMsg}`);
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'An error occurred while saving third price message. Please try again.';
+      alert(`Error: ${errorMsg}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -536,6 +590,39 @@ export default function SliderContentPage() {
             className="px-3 py-1 text-dark border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
           >
             {saving ? 'Saving...' : (appointmentReasonKeyExists ? 'Save' : 'Create')}
+          </button>
+        </div>
+      </ComponentCard>
+      <ComponentCard title="Third Price Message" desc="Controls the label shown under the third price on the homepage slider.">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-center">
+          <div className="md:col-span-2">
+            <div className="text-xs text-gray-500">Label</div>
+            <div className="text-sm break-words">{humanizeKey('third_price_message')}</div>
+            <div className="text-[10px] text-gray-500 mt-1">Key: <span className="font-mono">third_price_message</span></div>
+          </div>
+          <div className="md:col-span-3">
+            <div className="text-xs text-gray-500">Value (Text)</div>
+            <input
+              type="text"
+              className="w-full border px-2 py-1 rounded"
+              value={thirdPriceMessage}
+              onChange={(e) => setThirdPriceMessage(e.target.value)}
+              placeholder="Traditional"
+            />
+          </div>
+          <div className="md:col-span-1">
+            <div className="text-xs text-gray-500">Type</div>
+            <input className="w-full border px-2 py-1 rounded" value={'text'} readOnly />
+          </div>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            disabled={saving || loading}
+            onClick={handleSaveThirdPriceMessage}
+            className="px-3 py-1 text-dark border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            {saving ? 'Saving...' : (thirdPriceMessageKeyExists ? 'Save' : 'Create')}
           </button>
         </div>
       </ComponentCard>
