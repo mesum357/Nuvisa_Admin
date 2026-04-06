@@ -20,7 +20,7 @@ export default function VisaCountriesPage() {
   const [formData, setFormData] = useState<CreateVisaCountryData>({
     name: '',
     image: '',
-    price_from: 'From',
+    price_from: '',
     isActive: true,
   });
 
@@ -61,7 +61,7 @@ export default function VisaCountriesPage() {
         await fetchCountries();
         setShowModal(false);
         setEditingCountry(null);
-        setFormData({ name: '', image: '', price_from: 'From', isActive: true });
+        setFormData({ name: '', image: '', price_from: '', isActive: true });
       } else {
         alert(response.error || 'Failed to save country');
       }
@@ -106,7 +106,7 @@ export default function VisaCountriesPage() {
     setFormData({
       name: country.name,
       image: country.image || '',
-      price_from: country.price_from || 'From',
+      price_from: country.price_from || '',
       isActive: country.isActive,
     });
     setShowModal(true);
@@ -152,7 +152,7 @@ export default function VisaCountriesPage() {
         </div>
         <Button onClick={() => {
           setEditingCountry(null);
-          setFormData({ name: '', image: '', price_from: 'From', isActive: true });
+          setFormData({ name: '', image: '', price_from: '', isActive: true });
           setShowModal(true);
         }} size="sm">
           <Plus className="h-4 w-4" />

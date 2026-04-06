@@ -4,6 +4,7 @@ import React from 'react';
 import CheckoutContentForm from '@/components/admin/general-content/CheckoutContentForm';
 import PriceContentForm from '@/components/admin/general-content/PriceContentForm';
 import OccasionContentForm from '@/components/admin/general-content/OccasionContentForm';
+import VisaSolutionContentForm from '@/components/admin/general-content/VisaSolutionContentForm';
 import ContactContentForm from '@/components/admin/general-content/ContactContentForm';
 import UrgentContentForm from '@/components/admin/general-content/UrgentContentForm';
 import MoreToLoveContentForm from '@/components/admin/general-content/MoreToLoveContentForm';
@@ -20,6 +21,7 @@ export default function GeneralContentPage() {
 
       <CheckoutContentForm />
       <OccasionContentForm />
+      <VisaSolutionContentForm />
       <ContactContentForm />
       <UrgentContentForm />
       <MoreToLoveContentForm />
