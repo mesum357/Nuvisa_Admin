@@ -9,6 +9,8 @@ interface CountryPricing {
   earlyDiscount: number | string;
   originalPrice: number | string;
   traditionalPrice: number | string;
+  reason?: string;
+  reasonName?: string;
   isHidden?: boolean;
   hiddenReason?: string;
   priceMode?: 'two' | 'three';
@@ -56,6 +58,8 @@ export default function OccasionContentPage() {
       earlyDiscount: item.earlyDiscount ?? '',
       originalPrice: item.originalPrice ?? '',
       traditionalPrice: item.traditionalPrice ?? '',
+      reason: item.reason ?? '',
+      reasonName: item.reasonName ?? '',
       isHidden: item.isHidden ?? false,
       hiddenReason: item.hiddenReason ?? '',
       priceMode: item.priceMode ?? 'three',
@@ -135,28 +139,76 @@ export default function OccasionContentPage() {
     field: keyof CountryPricing,
     value: string | boolean
   ) => {
-    if (!content) return;
-    const newOccasions = [...content.occasions];
-    const occ = { ...newOccasions[occIndex] };
-    const pricing = [...(occ.countryPricing || [])];
-    const existingIdx = pricing.findIndex(p => p.country.toLowerCase() === country.toLowerCase());
-    if (existingIdx >= 0) {
-      pricing[existingIdx] = { ...pricing[existingIdx], [field]: value };
-    } else {
-      pricing.push({
-        country,
-        earlyDiscount: '',
-        originalPrice: '',
-        traditionalPrice: '',
-        isHidden: false,
-        hiddenReason: '',
-        priceMode: 'three',
-        [field]: value
-      });
-    }
-    occ.countryPricing = pricing;
-    newOccasions[occIndex] = occ;
-    setContent({ ...content, occasions: newOccasions });
+    setContent((prev) => {
+      if (!prev) return prev;
+      const newOccasions = [...prev.occasions];
+      const occ = { ...newOccasions[occIndex] };
+      const pricing = [...(occ.countryPricing || [])];
+      const existingIdx = pricing.findIndex(
+        (p) => p.country.toLowerCase() === country.toLowerCase()
+      );
+
+      if (existingIdx >= 0) {
+        pricing[existingIdx] = { ...pricing[existingIdx], [field]: value };
+      } else {
+        pricing.push({
+          country,
+          earlyDiscount: '',
+          originalPrice: '',
+          traditionalPrice: '',
+          reason: '',
+          reasonName: '',
+          isHidden: false,
+          hiddenReason: '',
+          priceMode: 'three',
+          [field]: value,
+        });
+      }
+
+      occ.countryPricing = pricing;
+      newOccasions[occIndex] = occ;
+      return { ...prev, occasions: newOccasions };
+    });
+  };
+
+  const handleCountryPricingModeChange = (
+    occIndex: number,
+    country: string,
+    nextMode: 'two' | 'three'
+  ) => {
+    setContent((prev) => {
+      if (!prev) return prev;
+      const newOccasions = [...prev.occasions];
+      const occ = { ...newOccasions[occIndex] };
+      const pricing = [...(occ.countryPricing || [])];
+      const existingIdx = pricing.findIndex(
+        (p) => p.country.toLowerCase() === country.toLowerCase()
+      );
+
+      if (existingIdx >= 0) {
+        pricing[existingIdx] = {
+          ...pricing[existingIdx],
+          priceMode: nextMode,
+          earlyDiscount: nextMode === 'two' ? '' : pricing[existingIdx].earlyDiscount,
+        };
+      } else {
+        pricing.push({
+          country,
+          earlyDiscount: '',
+          originalPrice: '',
+          traditionalPrice: '',
+          reason: '',
+          reasonName: '',
+          isHidden: false,
+          hiddenReason: '',
+          priceMode: nextMode,
+        });
+      }
+
+      occ.countryPricing = pricing;
+      newOccasions[occIndex] = occ;
+      return { ...prev, occasions: newOccasions };
+    });
   };
 
   const handleAddCountryToOccasion = (occIndex: number) => {
@@ -183,6 +235,8 @@ export default function OccasionContentPage() {
       earlyDiscount: '',
       originalPrice: '',
       traditionalPrice: '',
+      reason: '',
+      reasonName: '',
       isHidden: false,
       hiddenReason: '',
       priceMode: 'three',
@@ -463,7 +517,13 @@ export default function OccasionContentPage() {
                               <label className="text-[11px] text-gray-600 dark:text-gray-400">Pricing Mode</label>
                               <select
                                 value={cp.priceMode || 'three'}
-                                onChange={(e) => handleCountryPricingChange(idx, cp.country, 'priceMode', e.target.value as 'two' | 'three')}
+                                onChange={(e) =>
+                                  handleCountryPricingModeChange(
+                                    idx,
+                                    cp.country,
+                                    e.target.value as 'two' | 'three'
+                                  )
+                                }
                                 className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                               >
                                 <option value="two">2 Prices</option>
@@ -481,14 +541,32 @@ export default function OccasionContentPage() {
                               />
                             )}
 
-                            <div className={`grid ${cp.priceMode === 'two' ? 'grid-cols-2' : 'grid-cols-3'} gap-2 items-center`}>
                             <input
-                              type="number"
-                              placeholder="Early £"
-                              value={cp?.earlyDiscount || ''}
-                              onChange={(e) => handleCountryPricingChange(idx, cp.country, 'earlyDiscount', e.target.value)}
-                              className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              type="text"
+                              placeholder="Dropdown reason message"
+                              value={cp.reason || ''}
+                              onChange={(e) => handleCountryPricingChange(idx, cp.country, 'reason', e.target.value)}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             />
+
+                            <input
+                              type="text"
+                              placeholder="Reason button label"
+                              value={cp.reasonName || ''}
+                              onChange={(e) => handleCountryPricingChange(idx, cp.country, 'reasonName', e.target.value)}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            />
+
+                            <div className={`grid ${cp.priceMode === 'two' ? 'grid-cols-2' : 'grid-cols-3'} gap-2 items-center`}>
+                            {cp.priceMode !== 'two' && (
+                              <input
+                                type="number"
+                                placeholder="Early £"
+                                value={cp?.earlyDiscount || ''}
+                                onChange={(e) => handleCountryPricingChange(idx, cp.country, 'earlyDiscount', e.target.value)}
+                                className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              />
+                            )}
                             <input
                               type="number"
                               placeholder="Original £"
@@ -496,15 +574,13 @@ export default function OccasionContentPage() {
                               onChange={(e) => handleCountryPricingChange(idx, cp.country, 'originalPrice', e.target.value)}
                               className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             />
-                            {cp.priceMode !== 'two' && (
-                              <input
-                                type="number"
-                                placeholder="Traditional £"
-                                value={cp?.traditionalPrice || ''}
-                                onChange={(e) => handleCountryPricingChange(idx, cp.country, 'traditionalPrice', e.target.value)}
-                                className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                              />
-                            )}
+                            <input
+                              type="number"
+                              placeholder="Traditional £"
+                              value={cp?.traditionalPrice || ''}
+                              onChange={(e) => handleCountryPricingChange(idx, cp.country, 'traditionalPrice', e.target.value)}
+                              className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            />
                             </div>
                           </div>
                         );
