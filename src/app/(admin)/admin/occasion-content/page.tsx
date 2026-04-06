@@ -14,6 +14,9 @@ interface CountryPricing {
   isHidden?: boolean;
   hiddenReason?: string;
   priceMode?: 'two' | 'three';
+  earlyDiscountLabel?: string;
+  originalPriceLabel?: string;
+  traditionalPriceLabel?: string;
 }
 
 interface Occasion {
@@ -63,6 +66,9 @@ export default function OccasionContentPage() {
       isHidden: item.isHidden ?? false,
       hiddenReason: item.hiddenReason ?? '',
       priceMode: item.priceMode ?? 'three',
+      earlyDiscountLabel: item.earlyDiscountLabel ?? '',
+      originalPriceLabel: item.originalPriceLabel ?? '',
+      traditionalPriceLabel: item.traditionalPriceLabel ?? '',
     }));
   };
 
@@ -202,6 +208,9 @@ export default function OccasionContentPage() {
           isHidden: false,
           hiddenReason: '',
           priceMode: nextMode,
+          earlyDiscountLabel: '',
+          originalPriceLabel: '',
+          traditionalPriceLabel: '',
         });
       }
 
@@ -240,6 +249,9 @@ export default function OccasionContentPage() {
       isHidden: false,
       hiddenReason: '',
       priceMode: 'three',
+      earlyDiscountLabel: '',
+      originalPriceLabel: '',
+      traditionalPriceLabel: '',
     });
 
     occ.countryPricing = pricing;
@@ -557,6 +569,7 @@ export default function OccasionContentPage() {
                               className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             />
 
+                            {/* Price Inputs */}
                             <div className={`grid ${cp.priceMode === 'two' ? 'grid-cols-2' : 'grid-cols-3'} gap-2 items-center`}>
                             {cp.priceMode !== 'two' && (
                               <input
@@ -581,6 +594,34 @@ export default function OccasionContentPage() {
                               onChange={(e) => handleCountryPricingChange(idx, cp.country, 'traditionalPrice', e.target.value)}
                               className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             />
+                            </div>
+
+                            {/* Price Reason Labels */}
+                            <div className="border-t border-gray-300 dark:border-gray-600 pt-2 mt-2 space-y-2">
+                              <p className="text-[10px] font-semibold text-gray-600 dark:text-gray-400">Price Reason Labels:</p>
+                              {cp.priceMode !== 'two' && (
+                                <input
+                                  type="text"
+                                  placeholder="Early Discount label (e.g., 'Early bird')"
+                                  value={cp?.earlyDiscountLabel || ''}
+                                  onChange={(e) => handleCountryPricingChange(idx, cp.country, 'earlyDiscountLabel', e.target.value)}
+                                  className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                />
+                              )}
+                              <input
+                                type="text"
+                                placeholder={`Original Price label (e.g., '${cp.priceMode === 'two' ? 'Standard' : 'You save'}')`}
+                                value={cp?.originalPriceLabel || ''}
+                                onChange={(e) => handleCountryPricingChange(idx, cp.country, 'originalPriceLabel', e.target.value)}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Traditional Price label (e.g., 'Standard fee')"
+                                value={cp?.traditionalPriceLabel || ''}
+                                onChange={(e) => handleCountryPricingChange(idx, cp.country, 'traditionalPriceLabel', e.target.value)}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                              />
                             </div>
                           </div>
                         );
