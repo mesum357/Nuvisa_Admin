@@ -13,6 +13,9 @@ interface PopupQuestion {
 
 export default function PopupEditor() {
   const [formData, setFormData] = useState({
+    isActive: true,
+    triggerDelaySeconds: 145,
+    showOnDates: [] as string[],
     mainHeading: '',
     subHeading: '',
     offerPrice: '',
@@ -34,7 +37,14 @@ export default function PopupEditor() {
     axios.get('/api/popup-content').then(res => {
       if (res.data.success) {
         const { questions, ...data } = res.data.data;
-        setFormData({ ...data, continueButtonText: data.continueButtonText || 'Continue' });
+        setFormData(prev => ({
+          ...prev,
+          ...data,
+          isActive: typeof data.isActive === 'boolean' ? data.isActive : true,
+          triggerDelaySeconds: Number(data.triggerDelaySeconds) || 145,
+          showOnDates: Array.isArray(data.showOnDates) ? data.showOnDates : [],
+          continueButtonText: data.continueButtonText || 'Continue'
+        }));
         setQuestions(questions || []);
       }
     });
@@ -49,6 +59,10 @@ export default function PopupEditor() {
     try {
       const dataToSave = {
         ...formData,
+        triggerDelaySeconds: Math.max(0, Number(formData.triggerDelaySeconds) || 145),
+        showOnDates: Array.isArray(formData.showOnDates)
+          ? formData.showOnDates.map(d => d.trim()).filter(Boolean)
+          : [],
         continueButtonText: formData.continueButtonText || 'Continue', // Ensure it's never empty
       };
       await axios.post('/api/popup-content', dataToSave);
@@ -122,6 +136,47 @@ export default function PopupEditor() {
       </div>
       
       {/* Main Content Form */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 mb-2">
+        <div className="flex   h-full justify-start gap-3">
+          <input
+            id="isActive"
+            type="checkbox"
+            className='h-fit mt-1'
+            checked={formData.isActive}
+            onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+          />
+          <label htmlFor="isActive" className="font-bold text-sm text-black">Popup Active</label>
+        </div>
+        <div className='flex h-full flex-col justify-between'>
+          <label className="font-bold text-sm">Trigger Delay (seconds)</label>
+          <input
+            className={inputStyle}
+            type="number"
+            min={0}
+            value={formData.triggerDelaySeconds}
+            onChange={(e) => setFormData({ ...formData, triggerDelaySeconds: Number(e.target.value) || 0 })}
+          />
+        </div>
+        <div className='flex h-full flex-col justify-between'>
+          <label className="font-bold text-sm">Show On Specific Dates (YYYY-MM-DD, comma-separated)</label>
+          <input
+            className={inputStyle}
+            type="text"
+            value={formData.showOnDates.join(', ')}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                showOnDates: e.target.value
+                  .split(',')
+                  .map(s => s.trim())
+                  .filter(Boolean),
+              })
+            }
+            placeholder="2026-04-10, 2026-04-14"
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
         {/* Left Column */}
         <div>

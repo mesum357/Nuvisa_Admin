@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+const POPUP_STATE_KEY = 'popup_state';
+const DEFAULT_POPUP_STATE = {
+  isActive: true,
+  triggerDelaySeconds: 145,
+  showOnDates: [] as string[],
+};
+
+const parsePopupState = (value?: string | null) => {
+  if (!value) return DEFAULT_POPUP_STATE;
+
+  try {
+    const parsed = JSON.parse(value);
+    return {
+      isActive: typeof parsed?.isActive === 'boolean' ? parsed.isActive : DEFAULT_POPUP_STATE.isActive,
+      triggerDelaySeconds: Math.max(0, Number(parsed?.triggerDelaySeconds) || DEFAULT_POPUP_STATE.triggerDelaySeconds),
+      showOnDates: Array.isArray(parsed?.showOnDates)
+        ? parsed.showOnDates.map((d: unknown) => String(d).trim()).filter((d: string) => d.length > 0)
+        : [],
+    };
+  } catch {
+    return DEFAULT_POPUP_STATE;
+  }
+};
+
 export async function GET() {
   try {
     let content = await prisma.popupContent.findUnique({
@@ -67,7 +91,18 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ success: true, data: content });
+    const popupStateContent = await prisma.siteContent.findUnique({
+      where: { key: POPUP_STATE_KEY },
+    });
+    const popupState = parsePopupState(popupStateContent?.value);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...content,
+        ...popupState,
+      },
+    });
   } catch (error: any) {
     console.error('[API_POPUP_CONTENT_GET]', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch content', details: error.message }, { status: 500 });
@@ -77,14 +112,39 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    // Exclude questions from the body for this update
-    const { questions, id, ...updateData } = body;
+    // Exclude questions and popup-state fields from popup_content update payload
+    const { questions, id, isActive, triggerDelaySeconds, showOnDates, ...updateData } = body;
+
+    const popupState = {
+      isActive: typeof isActive === 'boolean' ? isActive : true,
+      triggerDelaySeconds: Math.max(0, Number(triggerDelaySeconds) || DEFAULT_POPUP_STATE.triggerDelaySeconds),
+      showOnDates: Array.isArray(showOnDates)
+        ? showOnDates.map((d: unknown) => String(d).trim()).filter((d: string) => d.length > 0)
+        : [],
+    };
 
     console.log('[API_POPUP_CONTENT_POST] Received updateData:', updateData); // Debug log
 
-    const updated = await prisma.popupContent.update({
+    const updated = await prisma.popupContent.upsert({
       where: { id: 'current' },
-      data: updateData,
+      update: updateData,
+      create: {
+        id: 'current',
+        ...updateData,
+      },
+    });
+
+    await prisma.siteContent.upsert({
+      where: { key: POPUP_STATE_KEY },
+      update: {
+        value: JSON.stringify(popupState),
+        type: 'json',
+      },
+      create: {
+        key: POPUP_STATE_KEY,
+        value: JSON.stringify(popupState),
+        type: 'json',
+      },
     });
     console.log('[API_POPUP_CONTENT_POST] Successfully updated content:', updated); // Debug log
     return NextResponse.json({ success: true, data: updated });
@@ -102,6 +162,9 @@ export async function DELETE() {
     });
     await prisma.popupContent.delete({
       where: { id: 'current' },
+    });
+    await prisma.siteContent.deleteMany({
+      where: { key: POPUP_STATE_KEY },
     });
     return NextResponse.json({ success: true, message: 'Popup content deleted.' });
   } catch (error: any) {
