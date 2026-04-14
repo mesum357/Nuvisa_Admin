@@ -244,6 +244,7 @@ model FAQ {
   question    String   @db.Text
   answer      String   @db.Text
   category    String?  // Optional category for grouping FAQs
+  faqType     FAQType  @default(WHAT_IT_IS)
   order       Int      @default(0) // For custom ordering
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -251,6 +252,7 @@ model FAQ {
   updatedBy   String?
 
   @@index([category])
+  @@index([faqType])
   @@index([isActive])
   @@index([order])
   @@map("faqs")
@@ -403,6 +405,12 @@ model userAccount {
 enum QuestionType {
   TEXT
   OPTIONS
+}
+
+enum FAQType {
+  WHAT_IT_IS
+  ELIGIBILITY
+  COUNTRIES
 }
 
 model PopupQuestion {

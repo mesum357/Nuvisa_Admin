@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { retryWithBackoff } from '@/lib/prisma';
 
+const FAQ_TYPES = ['WHAT_IT_IS', 'ELIGIBILITY', 'COUNTRIES'] as const;
+
+function isValidFaqType(value: string): value is (typeof FAQ_TYPES)[number] {
+  return (FAQ_TYPES as readonly string[]).includes(value);
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -11,6 +17,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get('category');
+    const faqType = searchParams.get('faqType');
 
     const where: any = {
       isActive: true, // Only return active FAQs for public API
@@ -18,6 +25,20 @@ export async function GET(request: NextRequest) {
 
     if (category) {
       where.category = category;
+    }
+
+    if (faqType) {
+      if (!isValidFaqType(faqType)) {
+        const response = NextResponse.json(
+          { error: 'Invalid faqType value' },
+          { status: 400 }
+        );
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          response.headers.set(key, value);
+        });
+        return response;
+      }
+      where.faqType = faqType;
     }
 
     // Use retry logic to handle connection issues
@@ -28,19 +49,21 @@ export async function GET(request: NextRequest) {
           { order: 'asc' },
           { createdAt: 'desc' },
         ],
-        select: {
-          id: true,
-          question: true,
-          answer: true,
-          category: true,
-          order: true,
-        },
       });
     });
 
+    const publicFaqs = faqs.map((faq: any) => ({
+      id: faq.id,
+      question: faq.question,
+      answer: faq.answer,
+      category: faq.category,
+      faqType: faq.faqType || 'WHAT_IT_IS',
+      order: faq.order,
+    }));
+
     const response = NextResponse.json({
       success: true,
-      data: faqs,
+      data: publicFaqs,
     });
 
     // Add CORS headers
