@@ -3,10 +3,22 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Plus, Edit2, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
-import { FAQ, CreateFAQData, UpdateFAQData } from '@/types';
+import { FAQ, CreateFAQData } from '@/types';
 import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { Modal } from '@/components/ui/modal';
+
+const FAQ_TYPE_OPTIONS = [
+  { value: 'WHAT_IT_IS', label: 'What is Schengen visa?' },
+  { value: 'ELIGIBILITY', label: 'Eligibility & Requirements  ' },
+  { value: 'COUNTRIES', label: '29 Schengen countries' },
+] as const;
+
+const FAQ_TYPE_LABELS: Record<string, string> = {
+  WHAT_IT_IS: 'What is Schengen visa?',
+  ELIGIBILITY: 'Eligibility & Requirements',
+  COUNTRIES: '29 Schengen countries',
+};
 
 export default function FAQManagementPage() {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
@@ -14,13 +26,14 @@ export default function FAQManagementPage() {
   const [saving, setSaving] = useState(false);
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [faqTypeFilter, setFaqTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [editingFAQ, setEditingFAQ] = useState<FAQ | null>(null);
   const [formData, setFormData] = useState<CreateFAQData>({
     question: '',
     answer: '',
+    faqType: 'WHAT_IT_IS',
     category: '',
     order: undefined, // Let the API assign the order automatically
     isActive: true,
@@ -31,7 +44,7 @@ export default function FAQManagementPage() {
     try {
       const params: Record<string, string> = {};
       if (searchQuery) params.search = searchQuery;
-      if (categoryFilter) params.category = categoryFilter;
+      if (faqTypeFilter) params.faqType = faqTypeFilter;
       if (statusFilter !== 'all') params.isActive = statusFilter;
 
       const response = await apiClient.get<FAQ[]>('/faqs', params);
@@ -43,7 +56,7 @@ export default function FAQManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, categoryFilter, statusFilter]);
+  }, [searchQuery, faqTypeFilter, statusFilter]);
 
   useEffect(() => {
     fetchFAQs();
@@ -179,6 +192,7 @@ export default function FAQManagementPage() {
     setFormData({
       question: '',
       answer: '',
+      faqType: 'WHAT_IT_IS',
       category: '',
       order: undefined, // Let the API assign the order automatically
       isActive: true,
@@ -195,6 +209,7 @@ export default function FAQManagementPage() {
     setFormData({
       question: faq.question,
       answer: faq.answer,
+      faqType: faq.faqType,
       category: faq.category || '',
       order: faq.order,
       isActive: faq.isActive,
@@ -202,8 +217,6 @@ export default function FAQManagementPage() {
     setEditingFAQ(faq);
     setShowModal(true);
   };
-
-  const categories = Array.from(new Set(faqs.map(faq => faq.category).filter(Boolean)));
 
   if (loading) {
     return (
@@ -247,17 +260,17 @@ export default function FAQManagementPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Category
+              FAQ Type
             </label>
             <select
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              value={faqTypeFilter}
+              onChange={(e) => setFaqTypeFilter(e.target.value)}
             >
-              <option value="">All Categories</option>
-              {categories.map((category) => (
-                <option key={category} value={category || ""}>
-                  {category || "Uncategorized"}
+              <option value="">All Types</option>
+              {FAQ_TYPE_OPTIONS.map((typeOption) => (
+                <option key={typeOption.value} value={typeOption.value}>
+                  {typeOption.label}
                 </option>
               ))}
             </select>
@@ -302,6 +315,9 @@ export default function FAQManagementPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-sm text-gray-500 dark:text-gray-400">
                         #{index + 1}
+                      </span>
+                      <span className="px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded">
+                        {FAQ_TYPE_LABELS[faq.faqType] || faq.faqType}
                       </span>
                       {faq.category && (
                         <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
@@ -437,6 +453,22 @@ export default function FAQManagementPage() {
               value={formData.answer}
               onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              FAQ Type *
+            </label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              value={formData.faqType}
+              onChange={(e) => setFormData({ ...formData, faqType: e.target.value as CreateFAQData['faqType'] })}
+            >
+              {FAQ_TYPE_OPTIONS.map((typeOption) => (
+                <option key={typeOption.value} value={typeOption.value}>
+                  {typeOption.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

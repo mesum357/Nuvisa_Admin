@@ -1,6 +1,6 @@
-import { UserRole, UserStatus, ApplicationStatus } from '@prisma/client';
+import { UserRole, UserStatus, ApplicationStatus, FAQType } from '@prisma/client';
 
-export type { UserRole, UserStatus, ApplicationStatus };
+export type { UserRole, UserStatus, ApplicationStatus, FAQType };
 
 export interface Admin {
   id: string;
@@ -236,6 +236,7 @@ export interface FAQ {
   question: string;
   answer: string;
   category?: string | null;
+  faqType: FAQType;
   order: number;
   isActive: boolean;
   createdAt: Date;
@@ -247,6 +248,7 @@ export interface CreateFAQData {
   question: string;
   answer: string;
   category?: string;
+  faqType?: FAQType;
   order?: number;
   isActive?: boolean;
 }
@@ -255,6 +257,7 @@ export interface UpdateFAQData {
   question?: string;
   answer?: string;
   category?: string;
+  faqType?: FAQType;
   order?: number;
   isActive?: boolean;
 }
