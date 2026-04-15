@@ -11,13 +11,13 @@ import { Modal } from '@/components/ui/modal';
 const FAQ_TYPE_OPTIONS = [
   { value: 'WHAT_IT_IS', label: 'What is Schengen visa?' },
   { value: 'ELIGIBILITY', label: 'Eligibility & Requirements  ' },
-  { value: 'COUNTRIES', label: '29 Schengen countries' },
+  { value: 'COUNTRIES', label: '29 Schengen countries?' },
 ] as const;
 
 const FAQ_TYPE_LABELS: Record<string, string> = {
   WHAT_IT_IS: 'What is Schengen visa?',
   ELIGIBILITY: 'Eligibility & Requirements',
-  COUNTRIES: '29 Schengen countries',
+  COUNTRIES: '29 Schengen countries?',
 };
 
 export default function FAQManagementPage() {
