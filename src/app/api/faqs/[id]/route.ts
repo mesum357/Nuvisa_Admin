@@ -4,12 +4,6 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { UpdateFAQData } from '@/types';
 
-const FAQ_TYPES = ['WHAT_IT_IS', 'ELIGIBILITY', 'COUNTRIES'] as const;
-
-function isValidFaqType(value: string): value is (typeof FAQ_TYPES)[number] {
-  return (FAQ_TYPES as readonly string[]).includes(value);
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -59,19 +53,20 @@ export async function PATCH(
 
     const { id } = await params;
     const data: UpdateFAQData = await request.json();
+    const userId = (session.user as any).id as string | undefined;
 
-    if (data.faqType && !isValidFaqType(data.faqType)) {
-      return NextResponse.json(
-        { error: 'Invalid faqType value' },
-        { status: 400 }
-      );
+    const updateData: UpdateFAQData = { ...data };
+
+    if (Object.prototype.hasOwnProperty.call(data, 'faqType')) {
+      const trimmedFaqType = typeof data.faqType === 'string' ? data.faqType.trim() : '';
+      updateData.faqType = trimmedFaqType || undefined;
     }
 
     const faq = await prisma.fAQ.update({
       where: { id },
       data: {
-        ...data,
-        updatedBy: (session.user as any).id,
+        ...updateData,
+        updatedBy: userId,
       },
     });
 

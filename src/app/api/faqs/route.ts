@@ -4,12 +4,6 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { CreateFAQData } from '@/types';
 
-const FAQ_TYPES = ['WHAT_IT_IS', 'ELIGIBILITY', 'COUNTRIES'] as const;
-
-function isValidFaqType(value: string): value is (typeof FAQ_TYPES)[number] {
-  return (FAQ_TYPES as readonly string[]).includes(value);
-}
-
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,6 +15,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get('category');
     const faqType = searchParams.get('faqType');
+    const isFeatured = searchParams.get('isFeatured');
     const isActive = searchParams.get('isActive');
     const search = searchParams.get('search');
 
@@ -31,13 +26,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (faqType) {
-      if (!isValidFaqType(faqType)) {
-        return NextResponse.json(
-          { error: 'Invalid faqType value' },
-          { status: 400 }
-        );
-      }
       where.faqType = faqType;
+    }
+
+    if (isFeatured !== null) {
+      where.is_featured = isFeatured === 'true';
     }
 
     if (isActive !== null) {
@@ -45,21 +38,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      const normalizedSearch = search.trim().toLowerCase();
-      const faqTypeFromSearch =
-        normalizedSearch === 'what it is' || normalizedSearch === 'what_it_is'
-          ? 'WHAT_IT_IS'
-          : normalizedSearch === 'eligibility'
-          ? 'ELIGIBILITY'
-          : normalizedSearch === 'countries' || normalizedSearch === 'country'
-          ? 'COUNTRIES'
-          : null;
-
       where.OR = [
         { question: { contains: search, mode: 'insensitive' } },
         { answer: { contains: search, mode: 'insensitive' } },
         { category: { contains: search, mode: 'insensitive' } },
-        ...(faqTypeFromSearch ? [{ faqType: faqTypeFromSearch }] : []),
+        { faqType: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -92,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data: CreateFAQData = await request.json();
-    const { question, answer, category, faqType, order, isActive = true } = data;
+    const { question, answer, category, faqType, order, isActive = true, is_featured = true } = data;
 
     if (!question || !answer) {
       return NextResponse.json(
@@ -101,12 +84,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (faqType && !isValidFaqType(faqType)) {
-      return NextResponse.json(
-        { error: 'Invalid faqType value' },
-        { status: 400 }
-      );
-    }
+    const userId = (session.user as any).id as string | undefined;
+    const trimmedFaqType = typeof faqType === 'string' ? faqType.trim() : '';
+    const resolvedFaqType = trimmedFaqType || null;
 
     // If no order is provided, assign the next available order
     let finalOrder = order;
@@ -123,10 +103,11 @@ export async function POST(request: NextRequest) {
         question,
         answer,
         category: category || null,
-        faqType: faqType || 'WHAT_IT_IS',
+        faqType: resolvedFaqType,
         order: finalOrder,
         isActive,
-        updatedBy: (session.user as any).id,
+        is_featured,
+        updatedBy: userId,
       },
     });
 

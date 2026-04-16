@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { retryWithBackoff } from '@/lib/prisma';
 
-const FAQ_TYPES = ['WHAT_IT_IS', 'ELIGIBILITY', 'COUNTRIES'] as const;
-
-function isValidFaqType(value: string): value is (typeof FAQ_TYPES)[number] {
-  return (FAQ_TYPES as readonly string[]).includes(value);
-}
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -18,6 +12,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get('category');
     const faqType = searchParams.get('faqType');
+    const isFeatured = searchParams.get('isFeatured');
 
     const where: any = {
       isActive: true, // Only return active FAQs for public API
@@ -28,17 +23,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (faqType) {
-      if (!isValidFaqType(faqType)) {
-        const response = NextResponse.json(
-          { error: 'Invalid faqType value' },
-          { status: 400 }
-        );
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          response.headers.set(key, value);
-        });
-        return response;
-      }
       where.faqType = faqType;
+    }
+
+    if (isFeatured === 'true') {
+      where.is_featured = true;
     }
 
     // Use retry logic to handle connection issues
@@ -57,7 +46,8 @@ export async function GET(request: NextRequest) {
       question: faq.question,
       answer: faq.answer,
       category: faq.category,
-      faqType: faq.faqType || 'WHAT_IT_IS',
+      faqType: faq.faqType,
+      is_featured: faq.is_featured,
       order: faq.order,
     }));
 

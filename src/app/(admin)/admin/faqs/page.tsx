@@ -1,42 +1,33 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Loader2, Star } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { FAQ, CreateFAQData } from '@/types';
 import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { Modal } from '@/components/ui/modal';
 
-const FAQ_TYPE_OPTIONS = [
-  { value: 'WHAT_IT_IS', label: 'What is Schengen visa?' },
-  { value: 'ELIGIBILITY', label: 'Eligibility & Requirements  ' },
-  { value: 'COUNTRIES', label: '29 Schengen countries?' },
-] as const;
-
-const FAQ_TYPE_LABELS: Record<string, string> = {
-  WHAT_IT_IS: 'What is Schengen visa?',
-  ELIGIBILITY: 'Eligibility & Requirements',
-  COUNTRIES: '29 Schengen countries?',
-};
-
 export default function FAQManagementPage() {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [faqTypes, setFaqTypes] = useState<{ name: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
-  const [faqTypeFilter, setFaqTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameData, setRenameData] = useState({ oldType: '', newType: '' });
   const [editingFAQ, setEditingFAQ] = useState<FAQ | null>(null);
   const [formData, setFormData] = useState<CreateFAQData>({
     question: '',
     answer: '',
-    faqType: 'WHAT_IT_IS',
+    faqType: '',
     category: '',
-    order: undefined, // Let the API assign the order automatically
+    order: undefined,
     isActive: true,
+    is_featured: true,
   });
 
   const fetchFAQs = useCallback(async () => {
@@ -44,7 +35,6 @@ export default function FAQManagementPage() {
     try {
       const params: Record<string, string> = {};
       if (searchQuery) params.search = searchQuery;
-      if (faqTypeFilter) params.faqType = faqTypeFilter;
       if (statusFilter !== 'all') params.isActive = statusFilter;
 
       const response = await apiClient.get<FAQ[]>('/faqs', params);
@@ -56,11 +46,23 @@ export default function FAQManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, faqTypeFilter, statusFilter]);
+  }, [searchQuery, statusFilter]);
+
+  const fetchFaqTypes = useCallback(async () => {
+    try {
+      const response = await apiClient.get<{ name: string; count: number }[]>('/faqs/types');
+      if (response.success && response.data) {
+        setFaqTypes(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching FAQ types:', error);
+    }
+  }, []);
 
   useEffect(() => {
     fetchFAQs();
-  }, [fetchFAQs]);
+    fetchFaqTypes();
+  }, [fetchFAQs, fetchFaqTypes]);
 
   const handleCreateFAQ = async () => {
     if (!formData.question || !formData.answer) {
@@ -156,6 +158,52 @@ export default function FAQManagementPage() {
     }
   };
 
+  const handleToggleFeatured = async (faq: FAQ) => {
+    setLoadingStates(prev => ({ ...prev, [`featured-${faq.id}`]: true }));
+    try {
+      const response = await apiClient.patch(`/faqs/${faq.id}`, {
+        is_featured: !faq.is_featured,
+      });
+      if (response.success) {
+        await fetchFAQs();
+        console.log(`FAQ ${faq.is_featured ? 'unfeatured' : 'featured'} successfully`);
+      } else {
+        alert('Failed to update featured status: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error toggling featured status:', error);
+      alert('Failed to update featured status. Please try again.');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [`featured-${faq.id}`]: false }));
+    }
+  };
+
+  const handleRenameFaqType = async () => {
+    if (!renameData.oldType || !renameData.newType) {
+      alert('Please fill in both fields');
+      return;
+    }
+
+    setLoadingStates(prev => ({ ...prev, 'renaming': true }));
+    try {
+      const response = await apiClient.patch('/faqs/types', renameData);
+      if (response.success) {
+        await fetchFAQs();
+        await fetchFaqTypes();
+        setShowRenameModal(false);
+        setRenameData({ oldType: '', newType: '' });
+        alert('FAQ type renamed successfully!');
+      } else {
+        alert('Failed to rename FAQ type: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error renaming FAQ type:', error);
+      alert('Failed to rename FAQ type. Please try again.');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, 'renaming': false }));
+    }
+  };
+
   const handleReorder = async (faq: FAQ, direction: 'up' | 'down') => {
     const currentIndex = faqs.findIndex(f => f.id === faq.id);
     if (currentIndex === -1) return;
@@ -192,10 +240,11 @@ export default function FAQManagementPage() {
     setFormData({
       question: '',
       answer: '',
-      faqType: 'WHAT_IT_IS',
+      faqType: '',
       category: '',
-      order: undefined, // Let the API assign the order automatically
+      order: undefined,
       isActive: true,
+      is_featured: true,
     });
   };
 
@@ -209,10 +258,11 @@ export default function FAQManagementPage() {
     setFormData({
       question: faq.question,
       answer: faq.answer,
-      faqType: faq.faqType,
+      faqType: faq.faqType || '',
       category: faq.category || '',
       order: faq.order,
       isActive: faq.isActive,
+      is_featured: faq.is_featured,
     });
     setEditingFAQ(faq);
     setShowModal(true);
@@ -260,23 +310,6 @@ export default function FAQManagementPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              FAQ Type
-            </label>
-            <select
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-              value={faqTypeFilter}
-              onChange={(e) => setFaqTypeFilter(e.target.value)}
-            >
-              <option value="">All Types</option>
-              {FAQ_TYPE_OPTIONS.map((typeOption) => (
-                <option key={typeOption.value} value={typeOption.value}>
-                  {typeOption.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Status
             </label>
             <select
@@ -297,6 +330,34 @@ export default function FAQManagementPage() {
         </div>
       </ComponentCard>
 
+      {/* FAQ Types Management */}
+      <ComponentCard title="Manage FAQ Categories">
+        <div className="space-y-3">
+          {faqTypes.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400">No FAQ types yet.</p>
+          ) : (
+            faqTypes.map((type) => (
+              <div key={type.name} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">{type.name}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{type.count} FAQ(s)</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setRenameData({ oldType: type.name, newType: type.name });
+                    setShowRenameModal(true);
+                  }}
+                >
+                  Rename
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      </ComponentCard>
+
       {/* FAQs List */}
       <ComponentCard title={`FAQs (${faqs.length})`}>
         <div className="space-y-4">
@@ -312,13 +373,15 @@ export default function FAQManagementPage() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2">
                       <span className="text-sm text-gray-500 dark:text-gray-400">
                         #{index + 1}
                       </span>
-                      <span className="px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded">
-                        {FAQ_TYPE_LABELS[faq.faqType] || faq.faqType}
-                      </span>
+                      {faq.faqType && (
+                        <span className="px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded">
+                          {faq.faqType}
+                        </span>
+                      )}
                       {faq.category && (
                         <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
                           {faq.category}
@@ -369,6 +432,20 @@ export default function FAQManagementPage() {
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <ChevronDown className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleFeatured(faq)}
+                      disabled={loadingStates[`featured-${faq.id}`]}
+                      title={faq.is_featured ? "Unfeature FAQ" : "Feature FAQ"}
+                      className={faq.is_featured ? 'text-yellow-600 hover:text-yellow-700' : 'text-gray-400'}
+                    >
+                      {loadingStates[`featured-${faq.id}`] ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Star className="w-4 h-4" fill={faq.is_featured ? 'currentColor' : 'none'} />
                       )}
                     </Button>
                     <Button
@@ -456,19 +533,24 @@ export default function FAQManagementPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              FAQ Type *
+              Tab Name
             </label>
-            <select
+            <input
+              list="faq-type-options"
+              type="text"
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+              placeholder="Type tab name (for example: Eligibility)"
               value={formData.faqType}
-              onChange={(e) => setFormData({ ...formData, faqType: e.target.value as CreateFAQData['faqType'] })}
-            >
-              {FAQ_TYPE_OPTIONS.map((typeOption) => (
-                <option key={typeOption.value} value={typeOption.value}>
-                  {typeOption.label}
-                </option>
+              onChange={(e) => setFormData({ ...formData, faqType: e.target.value })}
+            />
+            <datalist id="faq-type-options">
+              {faqTypes.map((type) => (
+                <option key={type.name} value={type.name} />
               ))}
-            </select>
+            </datalist>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Enter the tab name this FAQ should appear under.
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -482,17 +564,31 @@ export default function FAQManagementPage() {
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
             />
           </div>
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="isActive"
-              className="mr-2"
-              checked={formData.isActive}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-            />
-            <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Active
-            </label>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isActive"
+                className="mr-2"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+              />
+              <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Active
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isFeatured"
+                className="mr-2"
+                checked={formData.is_featured}
+                onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
+              />
+              <label htmlFor="isFeatured" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Featured
+              </label>
+            </div>
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <Button
@@ -519,6 +615,73 @@ export default function FAQManagementPage() {
               )}
             </Button>
           </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Rename FAQ Type Modal */}
+      <Modal
+        isOpen={showRenameModal}
+        onClose={() => {
+          setShowRenameModal(false);
+          setRenameData({ oldType: '', newType: '' });
+        }}
+      >
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Rename FAQ Type
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            This will update the type name for all FAQs with this type.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Current Name
+              </label>
+              <input
+                type="text"
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
+                value={renameData.oldType}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                New Name
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
+                placeholder="Enter new name..."
+                value={renameData.newType}
+                onChange={(e) => setRenameData({ ...renameData, newType: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRenameModal(false);
+                  setRenameData({ oldType: '', newType: '' });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRenameFaqType}
+                disabled={loadingStates['renaming']}
+              >
+                {loadingStates['renaming'] ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Renaming...
+                  </>
+                ) : (
+                  'Rename'
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>
