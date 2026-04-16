@@ -244,10 +244,11 @@ model FAQ {
   question    String   @db.Text
   answer      String   @db.Text
   category    String?  // Optional category for grouping FAQs
-  faqType     FAQType  @default(WHAT_IT_IS)
   order       Int      @default(0) // For custom ordering
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
+  faqType     String?  @default("What is Schengen visa?")
+  is_featured Boolean  @default(true)
   updatedAt   DateTime @updatedAt
   updatedBy   String?
 
