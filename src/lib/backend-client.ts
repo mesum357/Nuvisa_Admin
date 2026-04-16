@@ -41,7 +41,6 @@ async function ensureToken(requesterEmail?: string): Promise<string | undefined>
       if (res.ok) {
         const data = await res.json().catch(() => ({} as any));
         const token = data?.data?.token || data?.token || data?.data?.data?.token;
-        console.log('Login token response for', requesterEmail, { token, data });
         if (typeof token === 'string' && token.length > 0) {
           cachedTokenByEmail[requesterEmail] = { token, exp: now + 10 * 60 * 1000 };
           return token;
@@ -67,7 +66,6 @@ export const backendGet = async (path: string, params?: Record<string, any>, req
   // Use admin proxy headers instead of trying to get JWT token
   // This bypasses the need for user authentication since we're the admin panel
   const headers = getBackendHeaders();
-  console.log('Making backend GET request to', url.toString(), { requesterEmail, token: token ? '***' : null });
   const res = await fetch(url.toString(), { 
     cache: 'no-store', 
     headers,
