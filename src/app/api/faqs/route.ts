@@ -54,9 +54,49 @@ export async function GET(request: NextRequest) {
       ],
     });
 
+    let types: { name: string; count: number }[] | undefined;
+    if (isFeatured === 'true') {
+      const typesWhere: any = {
+        ...where,
+        is_featured: true,
+        NOT: [{ faqType: null }, { faqType: '' }],
+      };
+
+      // Return all featured types even when filtering FAQs by a single type.
+      delete typesWhere.faqType;
+
+      const faqTypeGroups = await prisma.fAQ.groupBy({
+        by: ['faqType'],
+        _count: {
+          id: true,
+        },
+        _min: {
+          order: true,
+        },
+        where: typesWhere,
+        orderBy: {
+          faqType: 'asc',
+        },
+      });
+
+      types = faqTypeGroups
+        .filter((group) => group.faqType)
+        .sort((a, b) => {
+          const aOrder = a._min.order ?? Number.MAX_SAFE_INTEGER;
+          const bOrder = b._min.order ?? Number.MAX_SAFE_INTEGER;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          return (a.faqType as string).localeCompare(b.faqType as string);
+        })
+        .map((group) => ({
+          name: group.faqType as string,
+          count: group._count.id,
+        }));
+    }
+
     return NextResponse.json({
       success: true,
       data: faqs,
+      ...(types ? { types } : {}),
     });
   } catch (error: any) {
     return NextResponse.json(

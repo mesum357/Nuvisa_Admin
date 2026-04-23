@@ -30,12 +30,19 @@ export default function FAQManagementPage() {
     is_featured: true,
   });
 
-  const fetchFAQs = useCallback(async () => {
-    setLoading(true);
+  const fetchFAQs = useCallback(async (filters?: { searchQuery?: string; statusFilter?: string }) => {
+    const isInitialLoad = !filters;
+    if (isInitialLoad) {
+      setLoading(true);
+    }
+
     try {
       const params: Record<string, string> = {};
-      if (searchQuery) params.search = searchQuery;
-      if (statusFilter !== 'all') params.isActive = statusFilter;
+      const currentSearchQuery = filters?.searchQuery?.trim() ?? '';
+      const currentStatusFilter = filters?.statusFilter ?? 'all';
+
+      if (currentSearchQuery) params.search = currentSearchQuery;
+      if (currentStatusFilter !== 'all') params.isActive = currentStatusFilter;
 
       const response = await apiClient.get<FAQ[]>('/faqs', params);
       if (response.success && response.data) {
@@ -44,9 +51,11 @@ export default function FAQManagementPage() {
     } catch (error) {
       console.error('Error fetching FAQs:', error);
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
-  }, [searchQuery, statusFilter]);
+  }, []);
 
   const fetchFaqTypes = useCallback(async () => {
     try {
@@ -64,6 +73,10 @@ export default function FAQManagementPage() {
     fetchFaqTypes();
   }, [fetchFAQs, fetchFaqTypes]);
 
+  const applyFilters = () => {
+    fetchFAQs({ searchQuery, statusFilter });
+  };
+
   const handleCreateFAQ = async () => {
     if (!formData.question || !formData.answer) {
       alert('Please fill in all required fields');
@@ -74,7 +87,7 @@ export default function FAQManagementPage() {
     try {
       const response = await apiClient.post('/faqs', formData);
       if (response.success) {
-        await fetchFAQs();
+        await fetchFAQs({ searchQuery, statusFilter });
         setShowModal(false);
         resetForm();
         console.log('FAQ created successfully');
@@ -99,7 +112,7 @@ export default function FAQManagementPage() {
     try {
       const response = await apiClient.patch(`/faqs/${editingFAQ.id}`, formData);
       if (response.success) {
-        await fetchFAQs();
+        await fetchFAQs({ searchQuery, statusFilter });
         setShowModal(false);
         setEditingFAQ(null);
         resetForm();
@@ -124,7 +137,7 @@ export default function FAQManagementPage() {
     try {
       const response = await apiClient.delete(`/faqs/${id}`);
       if (response.success) {
-        await fetchFAQs();
+        await fetchFAQs({ searchQuery, statusFilter });
         // Show success message (you could add a toast notification here)
         console.log('FAQ deleted successfully');
       } else {
@@ -145,7 +158,7 @@ export default function FAQManagementPage() {
         isActive: !faq.isActive,
       });
       if (response.success) {
-        await fetchFAQs();
+        await fetchFAQs({ searchQuery, statusFilter });
         console.log(`FAQ ${faq.isActive ? 'deactivated' : 'activated'} successfully`);
       } else {
         alert('Failed to update FAQ status: ' + (response.error || 'Unknown error'));
@@ -165,7 +178,7 @@ export default function FAQManagementPage() {
         is_featured: !faq.is_featured,
       });
       if (response.success) {
-        await fetchFAQs();
+        await fetchFAQs({ searchQuery, statusFilter });
         console.log(`FAQ ${faq.is_featured ? 'unfeatured' : 'featured'} successfully`);
       } else {
         alert('Failed to update featured status: ' + (response.error || 'Unknown error'));
@@ -188,7 +201,7 @@ export default function FAQManagementPage() {
     try {
       const response = await apiClient.patch('/faqs/types', renameData);
       if (response.success) {
-        await fetchFAQs();
+        await fetchFAQs({ searchQuery, statusFilter });
         await fetchFaqTypes();
         setShowRenameModal(false);
         setRenameData({ oldType: '', newType: '' });
@@ -223,7 +236,7 @@ export default function FAQManagementPage() {
       ]);
       
       if (responses.every(r => r.success)) {
-        await fetchFAQs();
+        await fetchFAQs({ searchQuery, statusFilter });
         console.log(`FAQ moved ${direction} successfully`);
       } else {
         alert('Failed to reorder FAQs: ' + responses.find(r => !r.success)?.error || 'Unknown error');
@@ -324,7 +337,7 @@ export default function FAQManagementPage() {
           </div>
         </div>
         <div className="mt-4">
-          <Button onClick={fetchFAQs} variant="outline">
+          <Button onClick={applyFilters} variant="outline">
             Apply Filters
           </Button>
         </div>
