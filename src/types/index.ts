@@ -237,12 +237,19 @@ export interface FAQ {
   answer: string;
   category?: string | null;
   faqType?: string | null;
+  faqTypeCreatedAt?: Date | string | null;
   order: number;
   isActive: boolean;
   is_featured: boolean;
   createdAt: Date;
   updatedAt: Date;
   updatedBy?: string | null;
+}
+
+export interface FAQTypeSummary {
+  name: string;
+  count: number;
+  createdAt?: Date | string | null;
 }
 
 export interface CreateFAQData {

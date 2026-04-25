@@ -248,6 +248,7 @@ model FAQ {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   faqType     String?  @default("What is Schengen visa?")
+  faqTypeCreatedAt   DateTime?  @default(now())
   is_featured Boolean  @default(true)
   updatedAt   DateTime @updatedAt
   updatedBy   String?

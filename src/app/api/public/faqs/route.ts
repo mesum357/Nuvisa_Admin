@@ -47,8 +47,10 @@ export async function GET(request: NextRequest) {
       answer: faq.answer,
       category: faq.category,
       faqType: faq.faqType,
+      faqTypeCreatedAt: faq.faqTypeCreatedAt,
       is_featured: faq.is_featured,
       order: faq.order,
+      createdAt: faq.createdAt,
     }));
 
     const response = NextResponse.json({
