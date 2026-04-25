@@ -4,6 +4,23 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { UpdateFAQData } from '@/types';
 
+const resolveFaqTypeCreatedAt = async (faqType: string, excludeId?: string): Promise<Date> => {
+  const where: any = { faqType };
+  if (excludeId) {
+    where.id = { not: excludeId };
+  }
+
+  const existingType = await prisma.fAQ.aggregate({
+    where,
+    _min: {
+      faqTypeCreatedAt: true,
+      createdAt: true,
+    },
+  });
+
+  return existingType._min.faqTypeCreatedAt ?? existingType._min.createdAt ?? new Date();
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -55,11 +72,35 @@ export async function PATCH(
     const data: UpdateFAQData = await request.json();
     const userId = (session.user as any).id as string | undefined;
 
-    const updateData: UpdateFAQData = { ...data };
+    const updateData: any = { ...data };
+    delete updateData.faqTypeCreatedAt;
 
     if (Object.prototype.hasOwnProperty.call(data, 'faqType')) {
       const trimmedFaqType = typeof data.faqType === 'string' ? data.faqType.trim() : '';
-      updateData.faqType = trimmedFaqType || undefined;
+
+      if (!trimmedFaqType) {
+        updateData.faqType = null;
+        updateData.faqTypeCreatedAt = null;
+      } else {
+        const currentFaq = await prisma.fAQ.findUnique({
+          where: { id },
+          select: {
+            faqType: true,
+          },
+        });
+
+        if (!currentFaq) {
+          return NextResponse.json(
+            { error: 'FAQ not found' },
+            { status: 404 }
+          );
+        }
+
+        updateData.faqType = trimmedFaqType;
+        if (currentFaq.faqType !== trimmedFaqType) {
+          updateData.faqTypeCreatedAt = await resolveFaqTypeCreatedAt(trimmedFaqType, id);
+        }
+      }
     }
 
     const faq = await prisma.fAQ.update({
