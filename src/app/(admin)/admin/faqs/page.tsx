@@ -3,14 +3,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Plus, Edit2, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Loader2, Star } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
-import { FAQ, CreateFAQData } from '@/types';
+import { FAQ, CreateFAQData, FAQTypeSummary } from '@/types';
 import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { Modal } from '@/components/ui/modal';
 
 export default function FAQManagementPage() {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
-  const [faqTypes, setFaqTypes] = useState<{ name: string; count: number }[]>([]);
+  const [faqTypes, setFaqTypes] = useState<FAQTypeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
@@ -59,7 +59,7 @@ export default function FAQManagementPage() {
 
   const fetchFaqTypes = useCallback(async () => {
     try {
-      const response = await apiClient.get<{ name: string; count: number }[]>('/faqs/types');
+      const response = await apiClient.get<FAQTypeSummary[]>('/faqs/types');
       if (response.success && response.data) {
         setFaqTypes(response.data);
       }
