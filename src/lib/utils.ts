@@ -64,6 +64,7 @@ export function getStatusColor(status: string): string {
     AT_EMBASSY: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
     
     // Final states
+    DECISION_MADE: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
     APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
     COMPLETED: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
     REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
@@ -79,7 +80,9 @@ export function getStatusColor(status: string): string {
 }
 
 export function formatStatusForEmail(status?: string): string {
-  return (status || '').replace(/_/g, ' ').toUpperCase();
+  const v = (status || '').toLowerCase().replace(/_/g, ' ').trim();
+  if (v === 'approved' || v === 'rejected' || v === 'decision made') return 'Decision Made';
+  return (status || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
 export function truncateText(text: string, maxLength: number): string {

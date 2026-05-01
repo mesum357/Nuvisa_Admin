@@ -41,14 +41,13 @@ export default function ApplicationDetailsPage() {
       const mapBackendStatus = (s?: string): ApplicationStatus => {
         const v = (s || '').toLowerCase();
         if (v === 'new' || v === 'draft') return 'PENDING' as ApplicationStatus;
-        if (v === 'submitted') return 'SUBMITTED' as ApplicationStatus; // Fixed: Use SUBMITTED instead of PENDING
+        if (v === 'submitted') return 'SUBMITTED' as ApplicationStatus;
         if (v === 'under_review' || v === 'processing') return 'UNDER_REVIEW' as ApplicationStatus;
         if (v === 'appointment_booked') return 'APPOINTMENT_BOOKED' as ApplicationStatus;
         if (v === 'at_embassy') return 'AT_EMBASSY' as ApplicationStatus;
-        if (v === 'approved') return 'APPROVED' as ApplicationStatus;
+        if (v === 'decision_made' || v === 'approved' || v === 'rejected' || v === 'cancelled') return 'DECISION_MADE' as ApplicationStatus;
         if (v === 'completed') return 'COMPLETED' as ApplicationStatus;
-        if (v === 'rejected' || v === 'cancelled') return 'REJECTED' as ApplicationStatus;
-        return (v as ApplicationStatus) || ('PENDING' as ApplicationStatus);
+        return (v.toUpperCase() as ApplicationStatus) || ('PENDING' as ApplicationStatus);
       };
       // Calculate total payment from all travelers
       const calculateTotalPayment = (travelers: any[]) => {
@@ -1092,8 +1091,7 @@ export default function ApplicationDetailsPage() {
                   <option value="UNDER_REVIEW">Under Review</option>
                   <option value="APPOINTMENT_BOOKED">Appointment Booked</option>
                   <option value="AT_EMBASSY">At Embassy</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="REJECTED">Rejected</option>
+                  <option value="DECISION_MADE">Decision Made, Passport Dispatched/Ready</option>
                 </select>
               </div>
 

@@ -68,9 +68,10 @@ export async function GET() {
     console.log('Total applications calculated:', totalApplications, '(from array:', applicationsData.length, ', from stats:', statsData?.total, ')');
     
     const pendingApplications = Number(statsData?.pending ?? 0);
-    const submittedApplications = Number(statsData?.submitted ?? 0); // Add submitted count
+    const submittedApplications = Number(statsData?.submitted ?? 0);
     const inProgress = Number(statsData?.in_progress ?? 0);
     const completed = Number(statsData?.completed ?? 0);
+    const decisionMade = Number(statsData?.decision_made ?? 0);
     const approved = Number(statsData?.approved ?? 0);
     const rejected = Number(statsData?.rejected ?? 0);
 
@@ -214,18 +215,17 @@ export async function GET() {
       totalRevenue: canViewAmounts(session.user) ? totalRevenue : 0,
       pendingApplications,
       submittedApplications, // Add submitted applications
-      approvedApplications: approved, // Use separate approved count
-      rejectedApplications: rejected,
+      approvedApplications: decisionMade + approved + rejected,
+      rejectedApplications: 0,
       newApplicationsToday: Array.isArray(todayApplications) ? todayApplications.length : 0,
       newUsersToday: Array.isArray(todayUsers) ? todayUsers.length : 0,
       revenueThisMonth: canViewAmounts(session.user) ? thisMonthRevenue : 0,
       applicationsByStatus: [
         { status: 'PENDING' as any, count: pendingApplications || 0 },
-        { status: 'SUBMITTED' as any, count: submittedApplications || 0 }, // Add submitted status
+        { status: 'SUBMITTED' as any, count: submittedApplications || 0 },
         { status: 'UNDER_REVIEW' as any, count: inProgress || 0 },
+        { status: 'DECISION_MADE' as any, count: decisionMade + approved + rejected || 0 },
         { status: 'COMPLETED' as any, count: completed || 0 },
-        { status: 'APPROVED' as any, count: approved || 0 },
-        { status: 'REJECTED' as any, count: rejected || 0 },
       ],
       recentApplications: Array.isArray(recentApplications) ? recentApplications.slice(0, 5) : [], // Show recent applications from last 30 days
     };
