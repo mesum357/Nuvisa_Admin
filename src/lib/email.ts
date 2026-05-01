@@ -56,6 +56,11 @@ export function getApplicationStatusEmailTemplate(
   status: string,
   message?: string
 ): string {
+  const normalized = (status || '').toLowerCase();
+  const isDecisionMade = normalized === 'approved' || normalized === 'rejected' || normalized === 'decision_made' || normalized === 'decision made';
+  const displayStatus = isDecisionMade ? 'Decision Made, Passport Dispatched/Ready' : (status || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const cssClass = isDecisionMade ? 'decision-made' : normalized.replace(/_/g, '-');
+
   return `
     <!DOCTYPE html>
     <html>
@@ -66,8 +71,9 @@ export function getApplicationStatusEmailTemplate(
           .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; }
           .content { padding: 30px 20px; background-color: #f9fafb; }
           .status { padding: 15px; margin: 20px 0; border-radius: 8px; font-weight: bold; }
-          .status.approved { background-color: #d1fae5; color: #065f46; }
-          .status.rejected { background-color: #fee2e2; color: #991b1b; }
+          .status.decision-made { background-color: #e0e7ff; color: #3730a3; }
+          .status.approved { background-color: #e0e7ff; color: #3730a3; }
+          .status.rejected { background-color: #e0e7ff; color: #3730a3; }
           .status.under-review { background-color: #dbeafe; color: #1e40af; }
           .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
         </style>
@@ -80,8 +86,8 @@ export function getApplicationStatusEmailTemplate(
           <div class="content">
             <p>Dear ${userName},</p>
             <p>Your application <strong>${applicationNo}</strong> status has been updated.</p>
-            <div class="status ${(status || '').toLowerCase().replace('_', '-')}">
-              Status: ${(status || '').replace('_', ' ')}
+            <div class="status ${cssClass}">
+              Status: ${displayStatus}
             </div>
             ${message ? `<p>${message}</p>` : ''}
             <p>You can log in to your account to view more details.</p>

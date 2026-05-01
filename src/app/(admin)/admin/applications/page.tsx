@@ -150,8 +150,7 @@ function ApplicationsContent() {
               <option value="UNDER_REVIEW">Under Review</option>
               <option value="APPOINTMENT_BOOKED">Appointment Booked</option>
               <option value="AT_EMBASSY">At Embassy</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
+              <option value="DECISION_MADE">Decision Made, Passport Dispatched/Ready</option>
               <option value="COMPLETED">Completed</option>
             </select>
             <div className="flex gap-2">
