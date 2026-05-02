@@ -81,7 +81,7 @@ export function getStatusColor(status: string): string {
 
 export function formatStatusForEmail(status?: string): string {
   const v = (status || '').toLowerCase().replace(/_/g, ' ').trim();
-  if (v === 'approved' || v === 'rejected' || v === 'decision made') return 'Decision Made';
+  if (v === 'approved' || v === 'rejected' || v === 'decision made') return 'Decision Made, Passport Dispatched/Ready';
   return (status || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
