@@ -83,7 +83,7 @@ export default function DashboardStats() {
         title: 'Submitted Applications',
         value: stats.submittedApplications.toLocaleString(),
         icon: <BoxIconLine className="text-gray-800 dark:text-white/90" />,
-        subValue: `${stats.approvedApplications.toLocaleString()} approved, ${stats.rejectedApplications.toLocaleString()} rejected`,
+        subValue: `${stats.approvedApplications.toLocaleString()} decision made`,
         positive: true,
         metric: 'submitted' as const,
         clickable: true,

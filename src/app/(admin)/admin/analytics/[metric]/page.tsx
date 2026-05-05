@@ -333,12 +333,8 @@ export default function AnalyticsPage() {
               data: safeMapData(d => d?.statusBreakdown?.inProgress || 0),
             },
             {
-              name: 'Approved',
-              data: safeMapData(d => d?.statusBreakdown?.approved || 0),
-            },
-            {
-              name: 'Rejected',
-              data: safeMapData(d => d?.statusBreakdown?.rejected || 0),
+              name: 'Decision Made, Passport Dispatched/Ready',
+              data: safeMapData(d => d?.statusBreakdown?.decision_made || 0),
             },
             {
               name: 'Completed',
