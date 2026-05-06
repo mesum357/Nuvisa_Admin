@@ -248,7 +248,14 @@ export async function GET(request: NextRequest) {
         where: { id: path }
       });
     }
-
+    if(!data) {
+      data = await prisma.comparisonSection.findFirst({
+        where:{
+          isActive:true,
+          countryName:"Default"
+        }
+      });
+    }
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching comparison section:', error);
