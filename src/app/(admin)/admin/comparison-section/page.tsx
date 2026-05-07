@@ -8,30 +8,33 @@ import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { Modal } from '@/components/ui/modal';
 
+const getInitialComparisonSectionData = (): CreateComparisonSectionData => ({
+  title: '',
+  countryName: '',
+  tooltip: '',
+  leftSideTitle: '',
+  rightSideTitle: '',
+  leftSideImage: '',
+  rightSideImage: '',
+  leftSideItems: [{ feature: '', value: '', tooltip: '' }],
+  rightSideItems: [{ feature: '', value: '', tooltip: '' }],
+  detailSections: [{ title: 'DETAILS', items: [''] }],
+  experienceType: 'IMAGES',
+  experienceItems: { leftImage: '', rightImage: '' },
+  experienceTitle: 'THE EXPERIENCE',
+  comparisonColumns: ['Traditional Agency', 'NUvisa'],
+  comparisonRows: [{ feature: '', values: ['', ''], tooltip: '' }],
+  isActive: true,
+});
+
 export default function ComparisonSectionPage() {
   const [comparisonSections, setComparisonSections] = useState<ComparisonSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingSection, setEditingSection] = useState<ComparisonSection | null>(null);
-  const [formData, setFormData] = useState<CreateComparisonSectionData>({
-    title: '',
-    countryName: '',
-    tooltip: "",
-    leftSideTitle: '',
-    rightSideTitle: '',
-    leftSideImage: '',
-    rightSideImage: '',
-    leftSideItems: [{ feature: '', value: '', tooltip: '' }],
-    rightSideItems: [{ feature: '', value: '', tooltip: '' }],
-    detailSections: [{ title: 'DETAILS', items: [''] }],
-    experienceType: 'IMAGES',
-    experienceItems: { leftImage: '', rightImage: '' },
-    experienceTitle: 'THE EXPERIENCE',
-    comparisonColumns: ['Traditional Agency', 'NUvisa'],
-    comparisonRows: [{ feature: '', values: ['', ''], tooltip: '' }],
-    isActive: true,
-  });
+  const [formData, setFormData] = useState<CreateComparisonSectionData>(getInitialComparisonSectionData());
+  const [bulkDefaultMode, setBulkDefaultMode] = useState(false);
 
   useEffect(() => {
     fetchComparisonSections();
@@ -51,6 +54,34 @@ export default function ComparisonSectionPage() {
     }
   };
 
+  const normalizeFormData = (section?: Partial<ComparisonSection> | null): CreateComparisonSectionData => {
+    const defaults = getInitialComparisonSectionData();
+
+    return {
+      ...defaults,
+      title: section?.title ?? defaults.title,
+      countryName: section?.countryName ?? defaults.countryName,
+      tooltip: section?.tooltip ?? defaults.tooltip,
+      leftSideTitle: section?.leftSideTitle ?? defaults.leftSideTitle,
+      rightSideTitle: section?.rightSideTitle ?? defaults.rightSideTitle,
+      leftSideImage: section?.leftSideImage ?? defaults.leftSideImage,
+      rightSideImage: section?.rightSideImage ?? defaults.rightSideImage,
+      leftSideItems: Array.isArray(section?.leftSideItems) ? section.leftSideItems : defaults.leftSideItems,
+      rightSideItems: Array.isArray(section?.rightSideItems) ? section.rightSideItems : defaults.rightSideItems,
+      detailSections: Array.isArray(section?.detailSections) ? section.detailSections : defaults.detailSections,
+      experienceType: (section?.experienceType as 'IMAGES' | 'TASKS') ?? defaults.experienceType,
+      experienceItems: section?.experienceItems ?? defaults.experienceItems,
+      experienceTitle: section?.experienceTitle ?? defaults.experienceTitle,
+      comparisonColumns: Array.isArray(section?.comparisonColumns) && section.comparisonColumns.length
+        ? section.comparisonColumns
+        : defaults.comparisonColumns,
+      comparisonRows: Array.isArray(section?.comparisonRows) && section.comparisonRows.length
+        ? section.comparisonRows
+        : defaults.comparisonRows,
+      isActive: section?.isActive ?? defaults.isActive,
+    };
+  };
+
   const handleCreate = async () => {
     setSaving(true);
     try {
@@ -65,6 +96,37 @@ export default function ComparisonSectionPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSubmitComparisonSection = async () => {
+    if (bulkDefaultMode) {
+      setSaving(true);
+      try {
+        const response = await apiClient.patch<{ updatedCount: number }>(
+          '/comparison-section?action=apply-default',
+          formData
+        );
+
+        if (response.success) {
+          setShowModal(false);
+          setBulkDefaultMode(false);
+          resetForm();
+          await fetchComparisonSections();
+        }
+      } catch (error) {
+        console.error('Error applying default comparison data:', error);
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    if (editingSection) {
+      await handleUpdate();
+      return;
+    }
+
+    await handleCreate();
   };
 
   const handleUpdate = async () => {
@@ -121,24 +183,7 @@ export default function ComparisonSectionPage() {
     }
   };
   const resetForm = () => {
-    setFormData({
-      title: '',
-      countryName: '',
-      tooltip: '',
-      leftSideTitle: '',
-      rightSideTitle: '',
-      leftSideImage: '',
-      rightSideImage: '',
-      leftSideItems: [{ feature: '', value: '', tooltip: '' }],
-      rightSideItems: [{ feature: '', value: '', tooltip: '' }],
-      detailSections: [{ title: 'DETAILS', items: [''] }],
-      experienceType: 'IMAGES',
-      experienceItems: { leftImage: '', rightImage: '' },
-      experienceTitle: 'THE EXPERIENCE',
-      comparisonColumns: ['Traditional Agency', 'NUvisa'],
-      comparisonRows: [{ feature: '', values: ['', ''], tooltip: '' }],
-      isActive: true,
-    });
+    setFormData(getInitialComparisonSectionData());
   };
 
   const normalizeItems = (items: (ComparisonItem | string)[]): ComparisonItem[] =>
@@ -148,30 +193,23 @@ export default function ComparisonSectionPage() {
 
   const openEditModal = (section: ComparisonSection) => {
     setEditingSection(section);
-    setFormData({
-      title: section.title,
-      countryName: section.countryName || '',
-      tooltip: section.tooltip || '',
-      leftSideTitle: section.leftSideTitle,
-      rightSideTitle: section.rightSideTitle,
-      leftSideImage: section.leftSideImage || '',
-      rightSideImage: section.rightSideImage || '',
-      leftSideItems: normalizeItems(section.leftSideItems as (ComparisonItem | string)[]),
-      rightSideItems: normalizeItems(section.rightSideItems as (ComparisonItem | string)[]),
-      detailSections: section.detailSections || [{ title: 'DETAILS', items: [] }],
-      experienceType: (section.experienceType as 'IMAGES' | 'TASKS') || 'IMAGES',
-      experienceItems: section.experienceItems || (section.experienceType === 'TASKS' ? [] : { leftImage: '', rightImage: '' }),
-      experienceTitle: section.experienceTitle || 'THE EXPERIENCE',
-      comparisonColumns: section.comparisonColumns || ['Traditional Agency', 'NUvisa'],
-      comparisonRows: section.comparisonRows || [{ feature: '', values: ['', ''], tooltip: '' }],
-      isActive: section.isActive,
-    });
+    setFormData(normalizeFormData(section));
+    setBulkDefaultMode(false);
     setShowModal(true);
   };
 
   const openCreateModal = () => {
     setEditingSection(null);
     resetForm();
+    setBulkDefaultMode(false);
+    setShowModal(true);
+  };
+
+  const openBulkDefaultModal = () => {
+    const defaultSection = comparisonSections.find((section) => section.countryName === 'Default');
+    setEditingSection(null);
+    setFormData(normalizeFormData(defaultSection || null));
+    setBulkDefaultMode(true);
     setShowModal(true);
   };
   const addItemRow = () => {
@@ -400,10 +438,16 @@ export default function ComparisonSectionPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Comparison Sections Management</h1>
-        <Button onClick={openCreateModal} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Create New Section
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={openCreateModal} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Create New Section
+          </Button>
+          <Button onClick={openBulkDefaultModal} size="sm" variant="outline">
+            <Save className="h-4 w-4 mr-2" />
+            Set Default / Reset To Default
+          </Button>
+        </div>
       </div>
 
       <ComponentCard title="All Comparison Sections" desc="Manage country-specific comparison data">
@@ -485,13 +529,21 @@ export default function ComparisonSectionPage() {
 
       <Modal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => {
+          setShowModal(false);
+          setBulkDefaultMode(false);
+        }}
         className="max-w-6xl p-8"
       >
         <div className="space-y-8 h-[calc(100vh-10rem)] overflow-y-auto overflow-x-hidden">
           <h2 className="text-2xl font-bold text-gray-900">
-            {editingSection ? 'Edit Comparison Points' : 'Create Comparison Points'}
+            {bulkDefaultMode ? 'Set Default Comparison Points' : editingSection ? 'Edit Comparison Points' : 'Create Comparison Points'}
           </h2>
+          {bulkDefaultMode && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              Changes here will be applied to every country section and the fallback Default record.
+            </div>
+          )}
           {/* Status Toggle */}
           <div className="flex items-center justify-between p-6 bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
             <div>
@@ -891,30 +943,33 @@ export default function ComparisonSectionPage() {
           {/* Action Buttons */}
           <div className="flex justify-between items-center pt-8 border-t border-gray-200">
             <div className="text-sm text-gray-500">
-              {editingSection ? 'Update your comparison points' : 'Create new comparison points'}
+              {bulkDefaultMode ? 'Apply shared values to all countries' : editingSection ? 'Update your comparison points' : 'Create new comparison points'}
             </div>
             <div className="flex gap-3">
               <Button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  setBulkDefaultMode(false);
+                }}
                 variant="outline"
                 className="px-6"
               >
                 Cancel
               </Button>
               <Button
-                onClick={editingSection ? handleUpdate : handleCreate}
+                onClick={handleSubmitComparisonSection}
                 disabled={saving}
                 className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {saving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    {editingSection ? 'Updating...' : 'Creating...'}
+                    {bulkDefaultMode ? 'Applying...' : editingSection ? 'Updating...' : 'Creating...'}
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    {editingSection ? 'Update Points' : 'Create Points'}
+                    {bulkDefaultMode ? 'Set Default For All Countries' : editingSection ? 'Update Points' : 'Create Points'}
                   </>
                 )}
               </Button>
