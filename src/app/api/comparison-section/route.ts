@@ -114,6 +114,36 @@ const formatPriceLikeExisting = (amount: number, existingValue: unknown): string
   return `${symbol}${formattedAmount}`;
 };
 
+const buildComparisonSectionData = (
+  body: Record<string, any>,
+  options: { includeCountryName?: boolean } = {}
+) => {
+  const data: Record<string, any> = {};
+
+  if (body.title !== undefined) data.title = body.title;
+  if (body.leftSideTitle !== undefined) data.leftSideTitle = body.leftSideTitle;
+  if (body.rightSideTitle !== undefined) data.rightSideTitle = body.rightSideTitle;
+  if (body.leftSideImage !== undefined) data.leftSideImage = body.leftSideImage || null;
+  if (body.rightSideImage !== undefined) data.rightSideImage = body.rightSideImage || null;
+  if (body.leftSideItems !== undefined) data.leftSideItems = body.leftSideItems;
+  if (body.rightSideItems !== undefined) data.rightSideItems = body.rightSideItems;
+  if (body.detailSections !== undefined) data.detailSections = body.detailSections;
+  if (body.experienceType !== undefined) data.experienceType = body.experienceType;
+  if (body.experienceItems !== undefined) data.experienceItems = body.experienceItems;
+  if (body.experienceTitle !== undefined) data.experienceTitle = body.experienceTitle;
+  if (body.comparisonColumns !== undefined) data.comparisonColumns = body.comparisonColumns;
+  if (body.comparisonRows !== undefined) data.comparisonRows = body.comparisonRows;
+  if (body.tooltip !== undefined) data.tooltip = body.tooltip || null;
+  if (body.isActive !== undefined) data.isActive = body.isActive;
+  if (body.updatedBy !== undefined) data.updatedBy = body.updatedBy || null;
+
+  if (options.includeCountryName && body.countryName !== undefined) {
+    data.countryName = body.countryName || null;
+  }
+
+  return data;
+};
+
 const applyOccasionPriceOverride = async (
   comparisonData: any,
   country: string,
@@ -320,18 +350,83 @@ export async function PATCH(request: NextRequest) {
     const action = searchParams.get('action');
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, error: 'ID is required' },
-        { status: 400 }
-      );
+      if (action !== 'apply-default') {
+        return NextResponse.json(
+          { success: false, error: 'ID is required' },
+          { status: 400 }
+        );
+      }
     }
 
     let data;
+    const comparisonId = id as string;
+
+    if (action === 'apply-default') {
+      const body = await request.json();
+
+      if (!body.title || !body.leftSideTitle || !body.rightSideTitle) {
+        return NextResponse.json(
+          { success: false, error: 'Title, leftSideTitle, and rightSideTitle are required' },
+          { status: 400 }
+        );
+      }
+
+      // Build the data to apply but explicitly DO NOT include countryName
+      const dataToApply = buildComparisonSectionData(body, { includeCountryName: false });
+
+      // Optional: allow caller to exclude one country from being overwritten (e.g., keep its own values)
+      const excludeCountryName = typeof body.excludeCountryName === 'string' && body.excludeCountryName.trim()
+        ? body.excludeCountryName.trim()
+        : null;
+
+      const whereClause: any = {};
+      if (excludeCountryName) {
+        whereClause.NOT = { countryName: excludeCountryName };
+      }
+
+      const updateResult = await prisma.comparisonSection.updateMany({
+        where: whereClause,
+        data: dataToApply,
+      });
+
+      // Ensure we store/update the Default template record, but do not propagate its countryName to others.
+      const defaultSection = await prisma.comparisonSection.findFirst({
+        where: { countryName: 'Default' },
+      });
+
+      if (defaultSection) {
+        await prisma.comparisonSection.update({
+          where: { id: defaultSection.id },
+          data: {
+            ...dataToApply,
+            // keep the explicit 'Default' name for the template record
+            countryName: 'Default',
+          },
+        });
+      } else {
+        await prisma.comparisonSection.create({
+          data: {
+            ...dataToApply,
+            leftSideItems: Array.isArray(body.leftSideItems) ? body.leftSideItems : [],
+            rightSideItems: Array.isArray(body.rightSideItems) ? body.rightSideItems : [],
+            countryName: 'Default',
+            isActive: body.isActive !== undefined ? body.isActive : true,
+          },
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          updatedCount: updateResult.count,
+        },
+      });
+    }
 
     if (action === 'toggle') {
       // Toggle active status
       const existing = await prisma.comparisonSection.findUnique({
-        where: { id }
+        where: { id: comparisonId }
       });
 
       if (!existing) {
@@ -342,34 +437,17 @@ export async function PATCH(request: NextRequest) {
       }
 
       data = await prisma.comparisonSection.update({
-        where: { id },
+        where: { id: comparisonId },
         data: { isActive: !existing.isActive }
       });
     } else {
       // Update comparison section
       const body = await request.json();
+      const updateData = buildComparisonSectionData(body, { includeCountryName: true });
 
       data = await prisma.comparisonSection.update({
-        where: { id },
-        data: {
-          title: body.title,
-          leftSideTitle: body.leftSideTitle,
-          rightSideTitle: body.rightSideTitle,
-          leftSideImage: body.leftSideImage,
-          rightSideImage: body.rightSideImage,
-          leftSideItems: body.leftSideItems,
-          rightSideItems: body.rightSideItems,
-          detailSections: body.detailSections,
-          experienceType: body.experienceType,
-          experienceItems: body.experienceItems,
-          experienceTitle: body.experienceTitle,
-          comparisonColumns: body.comparisonColumns,
-          comparisonRows: body.comparisonRows,
-          tooltip: body.tooltip,
-          countryName: body.countryName,
-          isActive: body.isActive,
-          updatedBy: body.updatedBy
-        }
+        where: { id: comparisonId },
+        data: updateData
       });
     }
 
@@ -398,9 +476,11 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    const comparisonId = id as string;
+
     // Check if comparison section exists
     const existing = await prisma.comparisonSection.findUnique({
-      where: { id }
+      where: { id: comparisonId }
     });
 
     if (!existing) {
@@ -411,7 +491,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     await prisma.comparisonSection.delete({
-      where: { id }
+      where: { id: comparisonId }
     });
 
     return NextResponse.json({
