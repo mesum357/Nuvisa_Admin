@@ -297,6 +297,32 @@ export default function OccasionContentPage() {
     setContent({ ...content, occasions: newOccasions });
   };
 
+  const handleUseDefaultCountries = (currentOccasionIndex: number) => {
+    if (!content || content.occasions.length === 0) return;
+    
+    // Get the countries data from the first box (index 0)
+    const firstOccasionCountries = content.occasions[0].countryPricing || [];
+    
+    if (firstOccasionCountries.length === 0) {
+      alert('No countries data in Box 1 to use as default.');
+      return;
+    }
+
+    // Deep copy the countries data from first box
+    const copiedCountries = firstOccasionCountries.map(cp => ({
+      ...cp
+    }));
+
+    // Update the current occasion with the copied countries data
+    const newOccasions = [...content.occasions];
+    const currentOccasion = { ...newOccasions[currentOccasionIndex] };
+    currentOccasion.countryPricing = copiedCountries;
+    newOccasions[currentOccasionIndex] = currentOccasion;
+    
+    setContent({ ...content, occasions: newOccasions });
+    alert(`Countries data from Box 1 has been populated. Please save changes to update Box ${currentOccasionIndex + 1}.`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -497,6 +523,15 @@ export default function OccasionContentPage() {
                         >
                           Add
                         </button>
+                        {idx !== 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleUseDefaultCountries(idx)}
+                            className="px-3 py-1 text-xs rounded bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
+                          >
+                            Use Default
+                          </button>
+                        )}
                       </div>
 
                       {(occ.countryPricing || []).length > 0 ? (
