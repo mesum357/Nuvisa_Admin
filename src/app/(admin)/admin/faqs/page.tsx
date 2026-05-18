@@ -19,6 +19,7 @@ export default function FAQManagementPage() {
   const [showModal, setShowModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renameData, setRenameData] = useState({ oldType: '', newType: '' });
+  const [newSectionName, setNewSectionName] = useState('');
   const [editingFAQ, setEditingFAQ] = useState<FAQ | null>(null);
   const [formData, setFormData] = useState<CreateFAQData>({
     question: '',
@@ -88,6 +89,7 @@ export default function FAQManagementPage() {
       const response = await apiClient.post('/faqs', formData);
       if (response.success) {
         await fetchFAQs({ searchQuery, statusFilter });
+        await fetchFaqTypes();
         setShowModal(false);
         resetForm();
         console.log('FAQ created successfully');
@@ -113,6 +115,7 @@ export default function FAQManagementPage() {
       const response = await apiClient.patch(`/faqs/${editingFAQ.id}`, formData);
       if (response.success) {
         await fetchFAQs({ searchQuery, statusFilter });
+        await fetchFaqTypes();
         setShowModal(false);
         setEditingFAQ(null);
         resetForm();
@@ -268,17 +271,50 @@ export default function FAQManagementPage() {
   };
 
   const openEditModal = (faq: FAQ) => {
+    const tab = faq.faqType || faq.category || '';
     setFormData({
       question: faq.question,
       answer: faq.answer,
-      faqType: faq.faqType || '',
-      category: faq.category || '',
+      faqType: tab,
+      category: tab,
       order: faq.order,
       isActive: faq.isActive,
       is_featured: faq.is_featured,
     });
     setEditingFAQ(faq);
     setShowModal(true);
+  };
+
+  const handleAddSection = async () => {
+    const name = newSectionName.trim();
+    if (!name) {
+      alert('Enter a section tab name');
+      return;
+    }
+
+    setLoadingStates((prev) => ({ ...prev, 'add-section': true }));
+    try {
+      const response = await apiClient.post('/faqs/types', { name });
+      if (response.success) {
+        setNewSectionName('');
+        await fetchFaqTypes();
+        alert(
+          response.message ||
+            `Section "${name}" is ready. Assign it when creating or editing an FAQ.`
+        );
+      } else {
+        alert('Failed to add section: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error adding section:', error);
+      alert('Failed to add section.');
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, 'add-section': false }));
+    }
+  };
+
+  const setSectionTab = (tab: string) => {
+    setFormData((prev) => ({ ...prev, faqType: tab, category: tab }));
   };
 
   if (loading) {
@@ -344,7 +380,32 @@ export default function FAQManagementPage() {
       </ComponentCard>
 
       {/* FAQ Types Management */}
-      <ComponentCard title="Manage FAQ Categories">
+      <ComponentCard title="Homepage section tabs (max 3 on site)">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          Only sections with at least one <strong>Featured</strong> FAQ appear as
+          subheadings on the homepage (maximum 3). Set section name and Featured in
+          Edit FAQ.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <input
+            type="text"
+            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            placeholder="New section tab name..."
+            value={newSectionName}
+            onChange={(e) => setNewSectionName(e.target.value)}
+          />
+          <Button
+            variant="outline"
+            onClick={handleAddSection}
+            disabled={loadingStates['add-section']}
+          >
+            {loadingStates['add-section'] ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              'Add section'
+            )}
+          </Button>
+        </div>
         <div className="space-y-3">
           {faqTypes.length === 0 ? (
             <p className="text-gray-500 dark:text-gray-400">No FAQ types yet.</p>
@@ -546,15 +607,15 @@ export default function FAQManagementPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Tab Name
+              Section tab (homepage subheading)
             </label>
             <input
               list="faq-type-options"
               type="text"
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-              placeholder="Type tab name (for example: Eligibility)"
+              placeholder="e.g. General information, Eligibility & requirements"
               value={formData.faqType}
-              onChange={(e) => setFormData({ ...formData, faqType: e.target.value })}
+              onChange={(e) => setSectionTab(e.target.value)}
             />
             <datalist id="faq-type-options">
               {faqTypes.map((type) => (
@@ -562,22 +623,11 @@ export default function FAQManagementPage() {
               ))}
             </datalist>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Enter the tab name this FAQ should appear under.
+              Type a new name to add a section, or pick existing. Use Rename above to
+              change a section name for all FAQs in that group.
             </p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Category
-            </label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500"
-              placeholder="e.g., General, Documents, Payment"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            />
-          </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -599,10 +649,14 @@ export default function FAQManagementPage() {
                 onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
               />
               <label htmlFor="isFeatured" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Featured
+                Featured on homepage
               </label>
             </div>
           </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+            Featured FAQs define which section tabs appear on the homepage (max 3
+            sections). All active FAQs still show under their section tab.
+          </p>
           <div className="flex justify-end gap-3 pt-4">
             <Button
               variant="outline"

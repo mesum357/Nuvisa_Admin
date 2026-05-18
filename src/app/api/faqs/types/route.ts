@@ -46,6 +46,44 @@ export async function GET() {
   }
 }
 
+/** Register a new section tab name (no FAQ row required). */
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const name = typeof body?.name === 'string' ? body.name.trim() : '';
+    if (!name) {
+      return NextResponse.json({ error: 'name is required' }, { status: 400 });
+    }
+
+    const existing = await prisma.fAQ.findFirst({
+      where: { OR: [{ faqType: name }, { category: name }] },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return NextResponse.json({
+        success: true,
+        data: { name, exists: true },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { name, exists: false },
+      message:
+        'Section name is ready. Create or edit an FAQ and choose this tab name to use it.',
+    });
+  } catch (error) {
+    console.error('Error creating FAQ type:', error);
+    return NextResponse.json({ error: 'Failed to create FAQ type' }, { status: 500 });
+  }
+}
+
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
