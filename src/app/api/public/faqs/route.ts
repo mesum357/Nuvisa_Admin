@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { retryWithBackoff } from '@/lib/prisma';
+import {
+  applyFeaturedFilter,
+  formatFaqsForApi,
+  resolveTabName,
+} from '@/lib/faq-utils';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,34 +19,25 @@ export async function GET(request: NextRequest) {
     const faqType = searchParams.get('faqType');
     const isFeatured = searchParams.get('isFeatured');
 
-    const where: any = {
-      isActive: true, // Only return active FAQs for public API
+    const where: Record<string, unknown> = {
+      isActive: true,
     };
 
-    if (category) {
-      where.category = category;
+    const tabFilter = resolveTabName(faqType, category);
+    if (tabFilter) {
+      where.OR = [{ category: tabFilter }, { faqType: tabFilter }];
     }
 
-    if (faqType) {
-      where.faqType = faqType;
-    }
+    applyFeaturedFilter(where, isFeatured);
 
-    if (isFeatured === 'true') {
-      where.is_featured = true;
-    }
-
-    // Use retry logic to handle connection issues
     const faqs = await retryWithBackoff(async () => {
-      return await prisma.fAQ.findMany({
+      return prisma.fAQ.findMany({
         where,
-        orderBy: [
-          { order: 'asc' },
-          { createdAt: 'desc' },
-        ],
+        orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
       });
     });
 
-    const publicFaqs = faqs.map((faq: any) => ({
+    const publicFaqs = formatFaqsForApi(faqs).map((faq) => ({
       id: faq.id,
       question: faq.question,
       answer: faq.answer,
@@ -58,55 +54,50 @@ export async function GET(request: NextRequest) {
       data: publicFaqs,
     });
 
-    // Add CORS headers
     Object.entries(corsHeaders).forEach(([key, value]) => {
       response.headers.set(key, value);
     });
 
     return response;
-  } catch (error: any) {
-    // Enhanced error logging with more details
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: string; meta?: unknown; stack?: string };
     console.error('Error fetching FAQs:', {
-      message: error?.message,
-      code: error?.code,
-      meta: error?.meta,
-      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+      message: err?.message,
+      code: err?.code,
+      meta: err?.meta,
+      stack: process.env.NODE_ENV === 'development' ? err?.stack : undefined,
     });
-    
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    const isConnectionError = 
-      error?.code === 'P1001' || // Can't reach database server
-      error?.code === 'P1002' || // Database server closed the connection
-      error?.code === 'P1008' || // Operations timed out
-      error?.code === 'P1017' || // Server has closed the connection
-      error?.message?.toLowerCase().includes('timeout') ||
-      error?.message?.toLowerCase().includes('connection');
-    
+    const isConnectionError =
+      err?.code === 'P1001' ||
+      err?.code === 'P1002' ||
+      err?.code === 'P1008' ||
+      err?.code === 'P1017' ||
+      err?.message?.toLowerCase().includes('timeout') ||
+      err?.message?.toLowerCase().includes('connection');
+
     const response = NextResponse.json(
-      { 
+      {
         error: 'Failed to fetch FAQs',
         details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
         retryable: isConnectionError,
       },
       { status: 500 }
     );
-    
-    // Add CORS headers to error response too
+
     Object.entries(corsHeaders).forEach(([key, value]) => {
       response.headers.set(key, value);
     });
-    
+
     return response;
   }
 }
 
-// Handle preflight requests
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   const response = new NextResponse(null, { status: 200 });
-
   response.headers.set('Access-Control-Allow-Origin', '*');
   response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
   return response;
 }
