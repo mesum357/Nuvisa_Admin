@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const page = request.nextUrl.searchParams.get('page') || '1';
     const limit = request.nextUrl.searchParams.get('limit') || '50';
 
-    const response = await backendGet('/admin/feedback', { page, limit });
+    const response = await backendGet('/orders/feedback', { page, limit });
     if (!response.ok) {
       return NextResponse.json(
         {
