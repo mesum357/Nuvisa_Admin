@@ -43,15 +43,24 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
+    // If no active section exists, return empty data (not an error)
+    if (!section) {
+      return NextResponse.json({ success: true, data: null }, { headers: getCorsHeaders(request) });
+    }
+
     return NextResponse.json({
       success: true,
       data: section,
     }, { headers: getCorsHeaders(request) });
   } catch (error: any) {
+    // Provide more diagnostic details for debugging deployment issues
     console.error('Error fetching country section:', error);
+    const errMsg = error?.message || String(error);
+    const errCode = error?.code || null;
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch country section',
+      details: { message: errMsg, code: errCode },
     }, { status: 500, headers: getCorsHeaders(request) });
   }
 }
