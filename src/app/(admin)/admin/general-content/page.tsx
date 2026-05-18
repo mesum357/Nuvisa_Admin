@@ -27,7 +27,7 @@ export default function GeneralContentPage() {
       <ContactContentForm />
       <UrgentContentForm />
       <MoreToLoveContentForm />
-      {/* <PriceContentForm /> */}
+      <PriceContentForm />
     </div>
   );
 }
