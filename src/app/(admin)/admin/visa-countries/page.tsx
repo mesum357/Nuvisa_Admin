@@ -29,7 +29,13 @@ export default function VisaCountriesPage() {
     try {
       const response = await apiClient.get<VisaCountry[]>('/visa-countries');
       if (response.success && response.data) {
-        setCountries(response.data);
+        // Normalize response shapes: some endpoints return an array,
+        // other proxied endpoints may return an object with results.items
+        let payload: any = response.data;
+        if (!Array.isArray(payload)) {
+          payload = payload?.results?.items || payload?.items || [];
+        }
+        setCountries(Array.isArray(payload) ? payload : []);
       }
     } catch (error) {
       console.error('Error fetching visa countries:', error);
