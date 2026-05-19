@@ -1,5 +1,2 @@
-import { redirect } from "next/navigation";
-
-export default function FeedbackAliasPage() {
-  redirect("/admin/feedback-submissions");
-}
+// Re-export the feedback-submissions page directly
+export { default } from "../feedback-submissions/page";

@@ -18,7 +18,20 @@ const FeedbackSubmissionsPage = () => {
         setError(response.error || "Failed to load feedback submissions.");
         return;
       }
-      setFeedback(Array.isArray(response.data?.items) ? response.data.items : response.data || []);
+      
+      // Handle different response structures from backend
+      let items = [];
+      if (Array.isArray(response.data)) {
+        items = response.data;
+      } else if (response.data?.results?.items && Array.isArray(response.data.results.items)) {
+        items = response.data.results.items;
+      } else if (response.data?.items && Array.isArray(response.data.items)) {
+        items = response.data.items;
+      } else if (response.data?.data && Array.isArray(response.data.data)) {
+        items = response.data.data;
+      }
+      
+      setFeedback(items);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
