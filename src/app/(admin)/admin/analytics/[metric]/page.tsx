@@ -333,7 +333,7 @@ export default function AnalyticsPage() {
               data: safeMapData(d => d?.statusBreakdown?.inProgress || 0),
             },
             {
-              name: 'Decision Made, Passport Dispatched/Ready',
+              name: 'Decision made / Dispatched / Ready',
               data: safeMapData(d => d?.statusBreakdown?.decision_made || 0),
             },
             {

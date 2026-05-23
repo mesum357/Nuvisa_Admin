@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { revalidatePublicSite } from '@/lib/revalidate-public-site';
+import { syncDailySlotsDefault } from '@/lib/daily-slots-site-content';
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,6 +72,19 @@ export async function POST(request: NextRequest) {
         updatedBy: (session.user as any).id,
       },
     });
+
+    if (key === 'daily_slots_state' && value) {
+      try {
+        const parsed = JSON.parse(value);
+        if (parsed?.defaultSpots != null) {
+          await syncDailySlotsDefault(parsed.defaultSpots);
+        }
+      } catch {
+        // ignore malformed daily_slots_state JSON
+      }
+    }
+
+    await revalidatePublicSite(['content', 'homepage']);
 
     return NextResponse.json({
       success: true,

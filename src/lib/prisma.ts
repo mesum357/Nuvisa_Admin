@@ -117,11 +117,8 @@ export const prisma =
 // This prevents multiple PrismaClient instances which would exhaust database connections
 if (!globalForPrisma.prisma) {
   globalForPrisma.prisma = prisma;
-  
-  // Perform initial connection health check
-  checkConnectionHealth(prisma).catch((error) => {
-    console.error('Initial database connection check failed:', error);
-  });
+  // Do not probe the DB on module load — Next.js dev compiles many routes at once
+  // and an eager health check races Supabase pooler warm-up, causing false P1001 errors.
 }
 
 // Gracefully disconnect on process termination

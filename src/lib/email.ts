@@ -1,4 +1,9 @@
 import nodemailer from 'nodemailer';
+import {
+  getPassportStatusLabel,
+  getPassportStatusMessage,
+  isPassportFinalStage,
+} from './passportStatusMessages';
 
 interface EmailOptions {
   to: string;
@@ -45,7 +50,8 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions): Prom
       text: text || '',
     });
     return true;
-  } catch (_error) {
+  } catch (error) {
+    console.error('[sendEmail] failed', { to, subject, error });
     return false;
   }
 }
@@ -56,10 +62,13 @@ export function getApplicationStatusEmailTemplate(
   status: string,
   message?: string
 ): string {
+  const isFinalStage = isPassportFinalStage(status);
+  const displayStatus = isFinalStage
+    ? getPassportStatusLabel(status)
+    : (status || '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  const statusBody = isFinalStage ? getPassportStatusMessage(status) : null;
   const normalized = (status || '').toLowerCase();
-  const isDecisionMade = normalized === 'approved' || normalized === 'rejected' || normalized === 'decision_made' || normalized === 'decision made';
-  const displayStatus = isDecisionMade ? 'Decision Made, Passport Dispatched/Ready' : (status || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  const cssClass = isDecisionMade ? 'decision-made' : normalized.replace(/_/g, '-');
+  const cssClass = isFinalStage ? 'decision-made' : normalized.replace(/_/g, '-');
 
   return `
     <!DOCTYPE html>
@@ -89,7 +98,8 @@ export function getApplicationStatusEmailTemplate(
             <div class="status ${cssClass}">
               Status: ${displayStatus}
             </div>
-            ${message ? `<p>${message}</p>` : ''}
+            ${statusBody ? `<p>${statusBody}</p>` : ''}
+            ${message ? `<p><strong>Note:</strong> ${message}</p>` : ''}
             <p>You can log in to your account to view more details.</p>
             <p>If you have any questions, please don't hesitate to contact us.</p>
           </div>
