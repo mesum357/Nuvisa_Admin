@@ -4,6 +4,12 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { backendGet, backendPatch } from '@/lib/backend-client';
 import { sendEmail, getApplicationStatusEmailTemplate } from '@/lib/email';
+import {
+  getPassportStatusLabel,
+  getPassportStatusMessage,
+  mapAdminStatusKeyToBackend,
+  mapAdminStatusKeyToPrisma,
+} from '@/lib/passportStatusMessages';
 import { formatStatusForEmail } from '@/lib/utils';
 
 export async function GET(
@@ -96,32 +102,20 @@ export async function PATCH(
     const data = await request.json();
     const { status, sendNotification, oldStatus, statusDisplay, ...updateData } = data;
 
-    // Map frontend status to backend status format
-    const mapStatusToBackend = (frontendStatus: string) => {
-      const statusMap: Record<string, string> = {
-        'PENDING': 'submitted',
-        'SUBMITTED': 'submitted',
-        'UNDER_REVIEW': 'under_review',
-        'APPOINTMENT_BOOKED': 'appointment_booked',
-        'AT_EMBASSY': 'at_embassy',
-        'DECISION_MADE': 'decision_made',
-        'APPROVED': 'decision_made',
-        'REJECTED': 'decision_made',
-        'COMPLETED': 'completed'
-      };
-      return statusMap[frontendStatus] || frontendStatus.toLowerCase();
-    };
-
     const formattedOldStatus = formatStatusForEmail(String(oldStatus || ''));
-    const formattedStatus = formatStatusForEmail(String(statusDisplay || status || ''));
+    const passportMessage = status ? getPassportStatusMessage(String(status)) : '';
+    const passportLabel = status ? getPassportStatusLabel(String(status)) : '';
+    const formattedStatus =
+      statusDisplay || passportLabel || passportMessage || formatStatusForEmail(String(status || ''));
 
     // ALWAYS try to update the backend first (visa_applications table)
-    const backendStatus = status ? mapStatusToBackend(status) : undefined;
+    const backendStatus = status ? mapAdminStatusKeyToBackend(status) : undefined;
     try {
       const backendPayload: Record<string, unknown> = {
         status: backendStatus,
         note: updateData.note,
-        sendNotification,
+        sendNotification: sendNotification !== false,
+        adminStatusKey: status,
       };
 
       // Pass display-friendly values for email templates expecting old/new status text.
@@ -129,9 +123,17 @@ export async function PATCH(
         backendPayload.oldStatus = formattedOldStatus;
       }
       if (formattedStatus) {
-        backendPayload.statusDisplay = formattedStatus;
-        backendPayload.newStatus = formattedStatus;
+        backendPayload.statusDisplay = passportLabel || formattedStatus;
+        backendPayload.newStatus = passportMessage || formattedStatus;
+        backendPayload.statusMessage = passportMessage || formattedStatus;
       }
+
+      console.log('[admin/applications PATCH] updating status', {
+        id,
+        adminStatusKey: status,
+        backendStatus,
+        sendNotification: sendNotification !== false,
+      });
 
       const be = await backendPatch(
         `/orders/application/${id}/status`, 
@@ -149,13 +151,23 @@ export async function PATCH(
           orderId: app.formattedOrderId || app.orderId,
           // Ensure consistent field names
           id: app.id || app.applicationId || id,
-          status: app.applicationStatus || app.status,
+          status: status || app.adminStatusKey || app.applicationStatus || app.status,
+          adminStatusKey: app.adminStatusKey || status,
+          statusDisplay: app.statusDisplay || passportLabel || formattedStatus,
+          statusMessage: app.statusMessage || passportMessage,
           totalAmount: app.totalAmount || app.amountPaidTotal || app.amountPaid || 0,
           paidAmount: app.paidAmount || app.amountPaidTotal || app.amountPaid || 0,
           submittedAt: app.submittedAt || app.createdAt,
           country: app.country,
           user: app.user || { id: app.email, name: app.email, email: app.email }
         };
+
+        console.log('[admin/applications PATCH] status saved', {
+          id,
+          status: formattedData.status,
+          statusDisplay: formattedData.statusDisplay,
+          email: sendNotification !== false ? 'delegated-to-backend' : 'skipped',
+        });
         
         return NextResponse.json({ success: true, data: formattedData });
       }
@@ -194,12 +206,14 @@ export async function PATCH(
       },
     });
 
-    if (status && status !== currentApplication.status) {
+    const prismaStatus = status ? mapAdminStatusKeyToPrisma(status) : undefined;
+
+    if (prismaStatus && prismaStatus !== currentApplication.status) {
       await prisma.applicationStatusHistory.create({
         data: {
           applicationId: id,
           oldStatus: currentApplication.status,
-          newStatus: status,
+          newStatus: prismaStatus as any,
           changedBy: (session.user as { id: string }).id,
           note: updateData.note || null,
         },
@@ -207,7 +221,7 @@ export async function PATCH(
 
       await prisma.application.update({
         where: { id },
-        data: { status },
+        data: { status: prismaStatus as any },
       });
 
       if (sendNotification) {
@@ -218,11 +232,19 @@ export async function PATCH(
           updateData.note
         );
 
-        await sendEmail({
+        const emailOk = await sendEmail({
           to: currentApplication.user.email,
           subject: `Application ${currentApplication.applicationNo} Status Update`,
           html: emailHtml,
         });
+        console.log('[admin/applications PATCH] prisma email', {
+          id,
+          attempted: true,
+          success: emailOk,
+          to: currentApplication.user.email,
+        });
+      } else {
+        console.log('[admin/applications PATCH] prisma email skipped (sendNotification=false)');
       }
     }
 

@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { getPassportStatusLabel, isPassportFinalStage } from './passportStatusMessages';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -80,9 +81,10 @@ export function getStatusColor(status: string): string {
 }
 
 export function formatStatusForEmail(status?: string): string {
-  const v = (status || '').toLowerCase().replace(/_/g, ' ').trim();
-  if (v === 'approved' || v === 'rejected' || v === 'decision made') return 'Decision Made, Passport Dispatched/Ready';
-  return (status || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  if (isPassportFinalStage(status)) {
+    return getPassportStatusLabel(status);
+  }
+  return (status || '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 export function truncateText(text: string, maxLength: number): string {

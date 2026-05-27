@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { apiClient } from '@/lib/api-client';
-import { SiteContent } from '@/types';
+import { useContentByKey } from '@/context/GeneralContentContext';
 
 const SUBTITLE_ONE_KEY = 'subtitle_one';
 const SUBTITLE_TWO_KEY = 'subtitle_two';
@@ -12,49 +12,24 @@ const SUBTITLE_TWO_KEY = 'subtitle_two';
 const DEFAULT_SUBTITLE_ONE = '99.3% Visa approval rate';
 const DEFAULT_SUBTITLE_TWO = '100% Risk free - Get your visa or full refund';
 
-type ContentMap = Record<string, SiteContent>;
-
 export default function CheckoutContentForm() {
-  const [loading, setLoading] = useState(true);
+  const { byKey, rows, loading, refresh } = useContentByKey();
   const [saving, setSaving] = useState(false);
   const [subtitleOne, setSubtitleOne] = useState(DEFAULT_SUBTITLE_ONE);
   const [subtitleTwo, setSubtitleTwo] = useState(DEFAULT_SUBTITLE_TWO);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    fetchCheckoutContent();
-  }, []);
-
-  const fetchCheckoutContent = async () => {
-    setLoading(true);
-
-    const response = await apiClient.get<SiteContent[]>('/content');
-
-    if (response.success && Array.isArray(response.data)) {
-      const byKey = response.data.reduce((acc: ContentMap, item) => {
-        acc[item.key] = item;
-        return acc;
-      }, {});
-
-      const subtitleOneContent = byKey[SUBTITLE_ONE_KEY];
-      const subtitleTwoContent = byKey[SUBTITLE_TWO_KEY];
-
-      setSubtitleOne(subtitleOneContent?.value || DEFAULT_SUBTITLE_ONE);
-      setSubtitleTwo(subtitleTwoContent?.value || DEFAULT_SUBTITLE_TWO);
-
-      const updatedTimes = [subtitleOneContent?.updatedAt, subtitleTwoContent?.updatedAt]
-        .filter(Boolean)
-        .map((date) => new Date(date as Date).getTime());
-
-      setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
-    } else {
-      setSubtitleOne(DEFAULT_SUBTITLE_ONE);
-      setSubtitleTwo(DEFAULT_SUBTITLE_TWO);
-      setLastUpdated(null);
-    }
-
-    setLoading(false);
-  };
+    if (loading) return;
+    const subtitleOneContent = byKey[SUBTITLE_ONE_KEY];
+    const subtitleTwoContent = byKey[SUBTITLE_TWO_KEY];
+    setSubtitleOne(subtitleOneContent?.value || DEFAULT_SUBTITLE_ONE);
+    setSubtitleTwo(subtitleTwoContent?.value || DEFAULT_SUBTITLE_TWO);
+    const updatedTimes = [subtitleOneContent?.updatedAt, subtitleTwoContent?.updatedAt]
+      .filter(Boolean)
+      .map((date) => new Date(date as Date).getTime());
+    setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
+  }, [loading, rows]);
 
   const saveContent = async (key: string, value: string) => {
     const postPayload = { key, value, type: 'text' };
@@ -71,7 +46,7 @@ export default function CheckoutContentForm() {
     ]);
 
     if (results.every(Boolean)) {
-      await fetchCheckoutContent();
+      await refresh({ silent: true });
     } else {
       alert('Failed to update checkout content');
     }

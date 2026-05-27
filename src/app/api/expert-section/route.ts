@@ -1,6 +1,8 @@
 // Expert Section API Route
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { syncDailySlotsDefault } from '@/lib/daily-slots-site-content';
+import { revalidatePublicSite } from '@/lib/revalidate-public-site';
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,6 +53,9 @@ export async function POST(request: NextRequest) {
         updatedBy: body.updatedBy || null,
       },
     });
+
+    await syncDailySlotsDefault(data.defaultSpotsLeft);
+    await revalidatePublicSite(['expert', 'homepage']);
 
     return NextResponse.json({
       success: true,
@@ -115,6 +120,11 @@ export async function PATCH(request: NextRequest) {
         },
       });
     }
+
+    if (data?.defaultSpotsLeft != null) {
+      await syncDailySlotsDefault(data.defaultSpotsLeft);
+    }
+    await revalidatePublicSite(['expert', 'homepage']);
 
     return NextResponse.json({
       success: true,

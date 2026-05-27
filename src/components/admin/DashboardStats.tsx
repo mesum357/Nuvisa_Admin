@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiClient } from '@/lib/api-client';
-import { DashboardStats as IDashboardStats } from '@/types';
+import { useDashboardData } from '@/context/DashboardDataContext';
 import { ArrowUpIcon, ArrowDownIcon, GroupIcon, BoxIconLine } from '@/icons';
 import Badge from '../ui/badge/Badge';
 import { formatCurrency, canViewAmounts } from '@/lib/utils';
@@ -12,25 +11,7 @@ import { useSession } from 'next-auth/react';
 export default function DashboardStats() {
   const router = useRouter();
   const { data: session } = useSession();
-  const [stats, setStats] = useState<IDashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchStats = useCallback(async (showLoading: boolean = true) => {
-    if (showLoading) {
-      setLoading(true);
-    }
-    const response = await apiClient.get<IDashboardStats>('/dashboard/stats');
-    if (response.success && response.data) {
-      setStats(response.data);
-    }
-    if (showLoading) {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  const { stats, loading } = useDashboardData();
 
   const handleMetricClick = (metric: 'applications' | 'users' | 'revenue' | 'pending' | 'submitted') => {
     router.push(`/admin/analytics/${metric}`);

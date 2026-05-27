@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { apiClient } from '@/lib/api-client';
-import { SiteContent } from '@/types';
+import { useContentByKey } from '@/context/GeneralContentContext';
 
 const PRICE_SUBTITLE_ONE_KEY = 'price_subtitle_one';
 const PRICE_SUBTITLE_TWO_KEY = 'price_subtitle_two';
@@ -14,10 +14,8 @@ const DEFAULT_PRICE_SUBTITLE_ONE = 'You save';
 const DEFAULT_PRICE_SUBTITLE_TWO = 'Traditional fee';
 const DEFAULT_PRICE_SUBTITLE_THREE = 'Traditional';
 
-type ContentMap = Record<string, SiteContent>;
-
 export default function PriceContentForm() {
-  const [loading, setLoading] = useState(true);
+  const { byKey, rows, loading, refresh } = useContentByKey();
   const [saving, setSaving] = useState(false);
   const [subtitleOne, setSubtitleOne] = useState(DEFAULT_PRICE_SUBTITLE_ONE);
   const [subtitleTwo, setSubtitleTwo] = useState(DEFAULT_PRICE_SUBTITLE_TWO);
@@ -25,48 +23,22 @@ export default function PriceContentForm() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    fetchPriceContent();
-  }, []);
-
-  const fetchPriceContent = async () => {
-    setLoading(true);
-
-    const responsew= await apiClient.get('/public/slider-content')
-    console.log("Slider content:", responsew.data);
-    const response = await apiClient.get<SiteContent[]>('/content');
-
-    if (response.success && Array.isArray(response.data)) {
-      const byKey = response.data.reduce((acc: ContentMap, item) => {
-        acc[item.key] = item;
-        return acc;
-      }, {});
-
-      const subtitleOneContent = byKey[PRICE_SUBTITLE_ONE_KEY];
-      const subtitleTwoContent = byKey[PRICE_SUBTITLE_TWO_KEY];
-      const subtitleThreeContent = byKey[PRICE_SUBTITLE_THREE_KEY];
-
-      setSubtitleOne(subtitleOneContent?.value || DEFAULT_PRICE_SUBTITLE_ONE);
-      setSubtitleTwo(subtitleTwoContent?.value || DEFAULT_PRICE_SUBTITLE_TWO);
-      setSubtitleThree(subtitleThreeContent?.value || DEFAULT_PRICE_SUBTITLE_THREE);
-
-      const updatedTimes = [
-        subtitleOneContent?.updatedAt,
-        subtitleTwoContent?.updatedAt,
-        subtitleThreeContent?.updatedAt,
-      ]
-        .filter(Boolean)
-        .map((date) => new Date(date as Date).getTime());
-
-      setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
-    } else {
-      setSubtitleOne(DEFAULT_PRICE_SUBTITLE_ONE);
-      setSubtitleTwo(DEFAULT_PRICE_SUBTITLE_TWO);
-      setSubtitleThree(DEFAULT_PRICE_SUBTITLE_THREE);
-      setLastUpdated(null);
-    }
-
-    setLoading(false);
-  };
+    if (loading) return;
+    const subtitleOneContent = byKey[PRICE_SUBTITLE_ONE_KEY];
+    const subtitleTwoContent = byKey[PRICE_SUBTITLE_TWO_KEY];
+    const subtitleThreeContent = byKey[PRICE_SUBTITLE_THREE_KEY];
+    setSubtitleOne(subtitleOneContent?.value || DEFAULT_PRICE_SUBTITLE_ONE);
+    setSubtitleTwo(subtitleTwoContent?.value || DEFAULT_PRICE_SUBTITLE_TWO);
+    setSubtitleThree(subtitleThreeContent?.value || DEFAULT_PRICE_SUBTITLE_THREE);
+    const updatedTimes = [
+      subtitleOneContent?.updatedAt,
+      subtitleTwoContent?.updatedAt,
+      subtitleThreeContent?.updatedAt,
+    ]
+      .filter(Boolean)
+      .map((date) => new Date(date as Date).getTime());
+    setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
+  }, [loading, rows]);
 
   const saveContent = async (key: string, value: string) => {
     const postPayload = { key, value, type: 'text' };
@@ -84,7 +56,7 @@ export default function PriceContentForm() {
     ]);
 
     if (results.every(Boolean)) {
-      await fetchPriceContent();
+      await refresh({ silent: true });
     } else {
       alert('Failed to update price content');
     }

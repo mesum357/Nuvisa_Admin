@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { apiClient } from '@/lib/api-client';
-import { SiteContent } from '@/types';
+import { useContentByKey } from '@/context/GeneralContentContext';
 
 const CONTACT_FIELDS = [
   { label: 'Contact Reduce', baseKey: 'contact_reduce' },
@@ -23,47 +23,28 @@ const createDefaultState = (): FormState => {
 };
 
 export default function ContactContentForm() {
-  const [loading, setLoading] = useState(true);
+  const { byKey, rows, loading, refresh } = useContentByKey();
   const [saving, setSaving] = useState(false);
   const [formState, setFormState] = useState<FormState>(createDefaultState());
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    fetchContactContent();
-  }, []);
-
-  const fetchContactContent = async () => {
-    setLoading(true);
-    const response = await apiClient.get<SiteContent[]>('/content');
-
-    if (response.success && Array.isArray(response.data)) {
-      const byKey = response.data.reduce((acc: Record<string, SiteContent>, item) => {
-        acc[item.key] = item;
-        return acc;
-      }, {});
-
-      const nextState = createDefaultState();
-      const updatedTimes: number[] = [];
-
-      CONTACT_FIELDS.forEach((field) => {
-        const titleKey = `${field.baseKey}_title`;
-        const descriptionKey = `${field.baseKey}_description`;
-
-        nextState[field.baseKey] = {
-          title: byKey[titleKey]?.value || '',
-          description: byKey[descriptionKey]?.value || '',
-        };
-
-        if (byKey[titleKey]?.updatedAt) updatedTimes.push(new Date(byKey[titleKey].updatedAt).getTime());
-        if (byKey[descriptionKey]?.updatedAt) updatedTimes.push(new Date(byKey[descriptionKey].updatedAt).getTime());
-      });
-
-      setFormState(nextState);
-      setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
-    }
-
-    setLoading(false);
-  };
+    if (loading) return;
+    const nextState = createDefaultState();
+    const updatedTimes: number[] = [];
+    CONTACT_FIELDS.forEach((field) => {
+      const titleKey = `${field.baseKey}_title`;
+      const descriptionKey = `${field.baseKey}_description`;
+      nextState[field.baseKey] = {
+        title: byKey[titleKey]?.value || '',
+        description: byKey[descriptionKey]?.value || '',
+      };
+      if (byKey[titleKey]?.updatedAt) updatedTimes.push(new Date(byKey[titleKey].updatedAt).getTime());
+      if (byKey[descriptionKey]?.updatedAt) updatedTimes.push(new Date(byKey[descriptionKey].updatedAt).getTime());
+    });
+    setFormState(nextState);
+    setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
+  }, [loading, rows]);
 
   const handleUpdate = async () => {
     setSaving(true);
@@ -90,7 +71,7 @@ export default function ContactContentForm() {
     const results = await Promise.all(requests);
 
     if (results.every((result) => result.success)) {
-      await fetchContactContent();
+      await refresh({ silent: true });
     } else {
       alert('Failed to update contact content');
     }

@@ -1,4 +1,13 @@
 import nodemailer from 'nodemailer';
+import {
+  getPassportStatusLabel,
+  getPassportStatusMessage,
+  isPassportFinalStage,
+} from './passportStatusMessages';
+import {
+  getApplicationStatusLabel,
+  getApplicationStatusMessage,
+} from './applicationStatusMessages';
 
 interface EmailOptions {
   to: string;
@@ -45,7 +54,8 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions): Prom
       text: text || '',
     });
     return true;
-  } catch (_error) {
+  } catch (error) {
+    console.error('[sendEmail] failed', { to, subject, error });
     return false;
   }
 }
@@ -56,10 +66,15 @@ export function getApplicationStatusEmailTemplate(
   status: string,
   message?: string
 ): string {
+  const isFinalStage = isPassportFinalStage(status);
+  const displayStatus = isFinalStage
+    ? getPassportStatusLabel(status)
+    : getApplicationStatusLabel(status);
+  const statusBody = isFinalStage
+    ? getPassportStatusMessage(status)
+    : getApplicationStatusMessage(status);
   const normalized = (status || '').toLowerCase();
-  const isDecisionMade = normalized === 'approved' || normalized === 'rejected' || normalized === 'decision_made' || normalized === 'decision made';
-  const displayStatus = isDecisionMade ? 'Decision Made, Passport Dispatched/Ready' : (status || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  const cssClass = isDecisionMade ? 'decision-made' : normalized.replace(/_/g, '-');
+  const cssClass = isFinalStage ? 'decision-made' : normalized.replace(/_/g, '-');
 
   return `
     <!DOCTYPE html>
@@ -87,9 +102,10 @@ export function getApplicationStatusEmailTemplate(
             <p>Dear ${userName},</p>
             <p>Your application <strong>${applicationNo}</strong> status has been updated.</p>
             <div class="status ${cssClass}">
-              Status: ${displayStatus}
+              ${displayStatus}
             </div>
-            ${message ? `<p>${message}</p>` : ''}
+            <p>${statusBody}</p>
+            ${message ? `<p><strong>Note:</strong> ${message}</p>` : ''}
             <p>You can log in to your account to view more details.</p>
             <p>If you have any questions, please don't hesitate to contact us.</p>
           </div>

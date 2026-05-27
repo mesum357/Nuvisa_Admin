@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma, { retryWithBackoff } from '@/lib/prisma';
+import { PUBLIC_CONTENT_CACHE_HEADERS } from '@/lib/routeCache';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
+  ...PUBLIC_CONTENT_CACHE_HEADERS,
 };
 
 export async function GET(request: NextRequest) {

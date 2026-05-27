@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { revalidatePublicSite } from '@/lib/revalidate-public-site';
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,6 +58,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await revalidatePublicSite(['hero', 'homepage']);
+
     return NextResponse.json({
       success: true,
       data: content,
@@ -100,6 +103,8 @@ export async function PATCH(request: NextRequest) {
         updatedBy: (session.user as any).id,
       },
     });
+
+    await revalidatePublicSite(['hero', 'homepage']);
 
     return NextResponse.json({
       success: true,

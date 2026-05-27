@@ -4,40 +4,30 @@ import React, { useEffect, useState } from 'react';
 import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { apiClient } from '@/lib/api-client';
-import { SiteContent } from '@/types';
+import { useGeneralContent, pickContentValue } from '@/context/GeneralContentContext';
 
 const OCCASSION_TITLE_KEY = 'ocassion_title';
 const OCCASSION_SUBTITLE_KEY = 'ocassion_subtitle';
 
 export default function OccasionContentForm() {
-  const [loading, setLoading] = useState(true);
+  const { rows, loading: contentLoading, refresh: refreshSiteContent } = useGeneralContent();
   const [saving, setSaving] = useState(false);
   const [occasionTitle, setOccasionTitle] = useState('');
   const [occasionSubtitle, setOccasionSubtitle] = useState('');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    fetchOccasionContent();
-  }, []);
+    if (contentLoading) return;
+    const titleItem = rows.find((content) => content.key === OCCASSION_TITLE_KEY);
+    const subtitleItem = rows.find((content) => content.key === OCCASSION_SUBTITLE_KEY);
+    setOccasionTitle(pickContentValue(rows, OCCASSION_TITLE_KEY));
+    setOccasionSubtitle(pickContentValue(rows, OCCASSION_SUBTITLE_KEY));
 
-  const fetchOccasionContent = async () => {
-    setLoading(true);
-    const response = await apiClient.get<SiteContent[]>('/content');
-
-    if (response.success && Array.isArray(response.data)) {
-      const titleItem = response.data.find((content) => content.key === OCCASSION_TITLE_KEY);
-      const subtitleItem = response.data.find((content) => content.key === OCCASSION_SUBTITLE_KEY);
-      setOccasionTitle(titleItem?.value || '');
-      setOccasionSubtitle(subtitleItem?.value || '');
-
-      const updatedTimes = [titleItem?.updatedAt, subtitleItem?.updatedAt]
-        .filter(Boolean)
-        .map((value) => new Date(value as Date).getTime());
-      setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
-    }
-
-    setLoading(false);
-  };
+    const updatedTimes = [titleItem?.updatedAt, subtitleItem?.updatedAt]
+      .filter(Boolean)
+      .map((value) => new Date(value as Date).getTime());
+    setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
+  }, [contentLoading, rows]);
 
   const handleUpdate = async () => {
     setSaving(true);
@@ -56,7 +46,7 @@ export default function OccasionContentForm() {
     ]);
 
     if (responses.every((response) => response.success)) {
-      await fetchOccasionContent();
+      await refreshSiteContent({ silent: true });
     } else {
       alert('Failed to update occasion content');
     }
@@ -64,7 +54,7 @@ export default function OccasionContentForm() {
     setSaving(false);
   };
 
-  if (loading) {
+  if (contentLoading) {
     return (
       <div className="flex items-center justify-center h-40">
         <div className="animate-pulse text-gray-500 dark:text-gray-400">Loading occasion content...</div>

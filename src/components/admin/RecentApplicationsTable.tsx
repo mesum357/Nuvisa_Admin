@@ -1,34 +1,17 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { apiClient } from '@/lib/api-client';
+import React, { useMemo } from 'react';
 import { Application } from '@/types';
+import { useDashboardData } from '@/context/DashboardDataContext';
 import { formatDate, getStatusColor } from '@/lib/utils';
 import Link from 'next/link';
 
 export default function RecentApplicationsTable() {
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchApplications = useCallback(async (showLoading: boolean = true) => {
-    if (showLoading) {
-      setLoading(true);
-    }
-    // Get today's applications from dashboard stats instead of recent applications
-    const response = await apiClient.get<{ data: { recentApplications: Application[] } }>('/dashboard/stats');
-    if (response.success && response.data) {
-      setApplications((response.data as any).recentApplications || []);
-    }
-    if (showLoading) {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchApplications();
-  }, [fetchApplications]);
-
-  // No auto-refresh; fetch once on mount
+  const { stats, loading } = useDashboardData();
+  const applications = useMemo(
+    () => (stats?.recentApplications as Application[] | undefined) || [],
+    [stats],
+  );
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">

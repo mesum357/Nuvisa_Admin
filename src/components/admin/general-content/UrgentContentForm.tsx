@@ -4,32 +4,22 @@ import React, { useEffect, useState } from 'react';
 import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { apiClient } from '@/lib/api-client';
-import { SiteContent } from '@/types';
+import { useContentByKey, pickContentValue } from '@/context/GeneralContentContext';
 
 const URGENT_DESCRIPTION_KEY = 'urgent_description';
 
 export default function UrgentContentForm() {
-  const [loading, setLoading] = useState(true);
+  const { rows, loading, refresh } = useContentByKey();
   const [saving, setSaving] = useState(false);
   const [urgentDescription, setUrgentDescription] = useState('');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    fetchUrgentContent();
-  }, []);
-
-  const fetchUrgentContent = async () => {
-    setLoading(true);
-    const response = await apiClient.get<SiteContent[]>('/content');
-
-    if (response.success && Array.isArray(response.data)) {
-      const item = response.data.find((content) => content.key === URGENT_DESCRIPTION_KEY);
-      setUrgentDescription(item?.value || '');
-      setLastUpdated(item?.updatedAt ? new Date(item.updatedAt) : null);
-    }
-
-    setLoading(false);
-  };
+    if (loading) return;
+    const item = rows.find((content) => content.key === URGENT_DESCRIPTION_KEY);
+    setUrgentDescription(pickContentValue(rows, URGENT_DESCRIPTION_KEY));
+    setLastUpdated(item?.updatedAt ? new Date(item.updatedAt) : null);
+  }, [loading, rows]);
 
   const handleUpdate = async () => {
     setSaving(true);
@@ -41,7 +31,7 @@ export default function UrgentContentForm() {
     });
 
     if (response.success) {
-      await fetchUrgentContent();
+      await refresh({ silent: true });
     } else {
       alert('Failed to update urgent description');
     }

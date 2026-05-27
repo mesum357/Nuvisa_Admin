@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { apiClient } from '@/lib/api-client';
-import { SiteContent } from '@/types';
+import { useContentByKey, pickContentValue } from '@/context/GeneralContentContext';
 
 const MORE_TO_LOVE_TITLE_ONE_KEY = 'more_to_love_title_one';
 const MORE_TO_LOVE_TITLE_TWO_KEY = 'more_to_love_title_two';
@@ -14,7 +14,7 @@ const MORE_TO_LOVE_LEFT_SUBTITLE_KEY = 'more_to_love_left_subtitle';
 const MORE_TO_LOVE_RIGHT_SUBTITLE_KEY = 'more_to_love_right_subtitle';
 
 export default function MoreToLoveContentForm() {
-  const [loading, setLoading] = useState(true);
+  const { rows, loading, refresh } = useContentByKey();
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState('');
   const [leftTitle, setLeftTitle] = useState('');
@@ -24,40 +24,24 @@ export default function MoreToLoveContentForm() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    fetchMoreToLoveContent();
-  }, []);
-
-  const fetchMoreToLoveContent = async () => {
-    setLoading(true);
-    const response = await apiClient.get<SiteContent[]>('/content');
-    
-    if (response.success && Array.isArray(response.data)) {
-      const titleItem = response.data.find((item) => item.key === MORE_TO_LOVE_TITLE_ONE_KEY);
-      const leftTitleItem = response.data.find((item) => item.key === MORE_TO_LOVE_LEFT_TITLE_KEY);
-      const rightTitleItem = response.data.find((item) => item.key === MORE_TO_LOVE_RIGHT_TITLE_KEY);
-      const leftSubtitleItem = response.data.find((item) => item.key === MORE_TO_LOVE_LEFT_SUBTITLE_KEY);
-      const rightSubtitleItem = response.data.find((item) => item.key === MORE_TO_LOVE_RIGHT_SUBTITLE_KEY);
-
-      setTitle(titleItem?.value || '');
-      setLeftTitle(leftTitleItem?.value || '');
-      setRightTitle(rightTitleItem?.value || '');
-      setLeftSubtitle(leftSubtitleItem?.value || '');
-      setRightSubtitle(rightSubtitleItem?.value || '');
-
-      const updatedTimes = [
-        titleItem?.updatedAt,
-        leftTitleItem?.updatedAt,
-        rightTitleItem?.updatedAt,
-        leftSubtitleItem?.updatedAt,
-        rightSubtitleItem?.updatedAt,
-      ]
-        .filter(Boolean)
-        .map((value) => new Date(value as Date).getTime());
-      setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
-    }
-
-    setLoading(false);
-  };
+    if (loading) return;
+    setTitle(pickContentValue(rows, MORE_TO_LOVE_TITLE_ONE_KEY));
+    setLeftTitle(pickContentValue(rows, MORE_TO_LOVE_LEFT_TITLE_KEY));
+    setRightTitle(pickContentValue(rows, MORE_TO_LOVE_RIGHT_TITLE_KEY));
+    setLeftSubtitle(pickContentValue(rows, MORE_TO_LOVE_LEFT_SUBTITLE_KEY));
+    setRightSubtitle(pickContentValue(rows, MORE_TO_LOVE_RIGHT_SUBTITLE_KEY));
+    const updatedTimes = [
+      MORE_TO_LOVE_TITLE_ONE_KEY,
+      MORE_TO_LOVE_LEFT_TITLE_KEY,
+      MORE_TO_LOVE_RIGHT_TITLE_KEY,
+      MORE_TO_LOVE_LEFT_SUBTITLE_KEY,
+      MORE_TO_LOVE_RIGHT_SUBTITLE_KEY,
+    ]
+      .map((key) => rows.find((row) => row.key === key)?.updatedAt)
+      .filter(Boolean)
+      .map((value) => new Date(value as Date).getTime());
+    setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
+  }, [loading, rows]);
 
   const handleUpdate = async () => {
     setSaving(true);
@@ -86,7 +70,7 @@ export default function MoreToLoveContentForm() {
     ]);
 
     if (responses.every((response) => response.success)) {
-      await fetchMoreToLoveContent();
+      await refresh({ silent: true });
     } else {
       alert('Failed to update More to Love content');
     }

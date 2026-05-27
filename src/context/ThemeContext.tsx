@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect } from "react";
 
 type Theme = "light";
 
@@ -18,10 +18,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   const theme: Theme = "light";
   const toggleTheme = () => {};
 
-  // Ensure any pre-existing dark class is removed
-  if (typeof document !== "undefined") {
+  useEffect(() => {
     document.documentElement.classList.remove("dark");
-  }
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

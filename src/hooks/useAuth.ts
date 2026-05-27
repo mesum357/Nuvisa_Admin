@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { UserRole } from '@/types';
 
@@ -29,11 +30,14 @@ export function useRequireAuth(requiredRole?: UserRole) {
 
 export function useCan() {
   const { role, permissions } = useAuth();
-  return (moduleKey: string, action: string = 'read'): boolean => {
-    if (role === 'SUPER_ADMIN') return true;
-    const modulePerm = (permissions as any)?.[moduleKey];
-    if (!modulePerm) return false;
-    return modulePerm[action] === true;
-  };
+  return useCallback(
+    (moduleKey: string, action: string = 'read'): boolean => {
+      if (role === 'SUPER_ADMIN') return true;
+      const modulePerm = (permissions as any)?.[moduleKey];
+      if (!modulePerm) return false;
+      return modulePerm[action] === true;
+    },
+    [role, permissions],
+  );
 }
 

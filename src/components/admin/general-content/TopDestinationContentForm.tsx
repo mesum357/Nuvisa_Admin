@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import ComponentCard from '@/components/common/ComponentCard';
 import Button from '@/components/ui/button/Button';
 import { apiClient } from '@/lib/api-client';
-import { SiteContent } from '@/types';
+import { useContentByKey } from '@/context/GeneralContentContext';
 
 const TOP_DESTINATION_TITLE_KEY = 'topdestination_title';
 const TOP_DESTINATION_SUBTITLE_KEY = 'topdestination_subtitle';
@@ -28,10 +28,8 @@ const DEFAULT_TOP_DESTINATION_COUNTRIES: TopDestinationCountry[] = [
   { name: 'Netherlands', bgColor: '#ffb1ee', isHidden: false },
 ];
 
-type ContentMap = Record<string, SiteContent>;
-
 export default function TopDestinationContentForm() {
-  const [loading, setLoading] = useState(true);
+  const { byKey, rows, loading, refresh } = useContentByKey();
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState(DEFAULT_TOP_DESTINATION_TITLE);
   const [subtitle, setSubtitle] = useState(DEFAULT_TOP_DESTINATION_SUBTITLE);
@@ -39,63 +37,37 @@ export default function TopDestinationContentForm() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
-    fetchTopDestinationContent();
-  }, []);
-
-  const fetchTopDestinationContent = async () => {
-    setLoading(true);
-
-    const response = await apiClient.get<SiteContent[]>('/content');
-
-    if (response.success && Array.isArray(response.data)) {
-      const byKey = response.data.reduce((acc: ContentMap, item) => {
-        acc[item.key] = item;
-        return acc;
-      }, {});
-
-      const titleContent = byKey[TOP_DESTINATION_TITLE_KEY];
-      const subtitleContent = byKey[TOP_DESTINATION_SUBTITLE_KEY];
-      const countriesContent = byKey[TOP_DESTINATION_COUNTRIES_KEY];
-
-      setTitle(titleContent?.value || DEFAULT_TOP_DESTINATION_TITLE);
-      setSubtitle(subtitleContent?.value || DEFAULT_TOP_DESTINATION_SUBTITLE);
-
-      let parsedCountries: TopDestinationCountry[] = [];
-      if (countriesContent?.value) {
-        try {
-          const parsed = JSON.parse(countriesContent.value);
-          if (Array.isArray(parsed)) {
-            parsedCountries = parsed
-              .map((item) => ({
-                name: String(item?.name || '').trim(),
-                bgColor: String(item?.bgColor || '').trim() || '#5f9aff',
-                isHidden: Boolean(item?.isHidden),
-              }))
-              .filter((item) => item.name);
-          }
-        } catch {
-          // Keep defaults if JSON is malformed.
+    if (loading) return;
+    const titleContent = byKey[TOP_DESTINATION_TITLE_KEY];
+    const subtitleContent = byKey[TOP_DESTINATION_SUBTITLE_KEY];
+    const countriesContent = byKey[TOP_DESTINATION_COUNTRIES_KEY];
+    setTitle(titleContent?.value || DEFAULT_TOP_DESTINATION_TITLE);
+    setSubtitle(subtitleContent?.value || DEFAULT_TOP_DESTINATION_SUBTITLE);
+    let parsedCountries: TopDestinationCountry[] = [];
+    if (countriesContent?.value) {
+      try {
+        const parsed = JSON.parse(countriesContent.value);
+        if (Array.isArray(parsed)) {
+          parsedCountries = parsed
+            .map((item) => ({
+              name: String(item?.name || '').trim(),
+              bgColor: String(item?.bgColor || '').trim() || '#5f9aff',
+              isHidden: Boolean(item?.isHidden),
+            }))
+            .filter((item) => item.name);
         }
+      } catch {
+        // Keep defaults if JSON is malformed.
       }
-
-      setCountries(
-        parsedCountries.length > 0 ? parsedCountries : DEFAULT_TOP_DESTINATION_COUNTRIES
-      );
-
-      const updatedTimes = [titleContent?.updatedAt, subtitleContent?.updatedAt, countriesContent?.updatedAt]
-        .filter(Boolean)
-        .map((date) => new Date(date as Date).getTime());
-
-      setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
-    } else {
-      setTitle(DEFAULT_TOP_DESTINATION_TITLE);
-      setSubtitle(DEFAULT_TOP_DESTINATION_SUBTITLE);
-      setCountries(DEFAULT_TOP_DESTINATION_COUNTRIES);
-      setLastUpdated(null);
     }
-
-    setLoading(false);
-  };
+    setCountries(
+      parsedCountries.length > 0 ? parsedCountries : DEFAULT_TOP_DESTINATION_COUNTRIES,
+    );
+    const updatedTimes = [titleContent?.updatedAt, subtitleContent?.updatedAt, countriesContent?.updatedAt]
+      .filter(Boolean)
+      .map((date) => new Date(date as Date).getTime());
+    setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
+  }, [loading, rows]);
 
   const saveContent = async (key: string, value: string) => {
     const response = await apiClient.post('/content', { key, value, type: 'text' });
@@ -112,7 +84,7 @@ export default function TopDestinationContentForm() {
     ]);
 
     if (results.every(Boolean)) {
-      await fetchTopDestinationContent();
+      await refresh({ silent: true });
     } else {
       alert('Failed to update top destination content');
     }

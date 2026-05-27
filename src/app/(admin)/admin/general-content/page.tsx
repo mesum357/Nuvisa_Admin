@@ -9,9 +9,11 @@ import TopDestinationContentForm from '@/components/admin/general-content/TopDes
 import ContactContentForm from '@/components/admin/general-content/ContactContentForm';
 import UrgentContentForm from '@/components/admin/general-content/UrgentContentForm';
 import MoreToLoveContentForm from '@/components/admin/general-content/MoreToLoveContentForm';
+import { GeneralContentProvider } from '@/context/GeneralContentContext';
 
 export default function GeneralContentPage() {
   return (
+    <GeneralContentProvider>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">General Content</h1>
@@ -29,5 +31,6 @@ export default function GeneralContentPage() {
       <MoreToLoveContentForm />
       <PriceContentForm />
     </div>
+    </GeneralContentProvider>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState,useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -21,131 +21,73 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-const baseNavItems: NavItem[] = [
+type NavSection = {
+  title: string;
+  items: NavItem[];
+};
+
+const navSections: NavSection[] = [
   {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    path: "/",
+    title: "Overview",
+    items: [{ icon: <GridIcon />, name: "Dashboard", path: "/" }],
   },
   {
-    icon: <ListIcon />,
-    name: "Applications",
-    path: "/admin/applications",
+    title: "Applications",
+    items: [
+      { icon: <ListIcon />, name: "All applications", path: "/admin/applications" },
+    ],
   },
   {
-    icon: <UserCircleIcon />,
-    name: "Users",
-    path: "/admin/users",
+    title: "Content",
+    items: [
+      {
+        icon: <PageIcon />,
+        name: "Homepage",
+        subItems: [
+          { name: "Hero content", path: "/admin/hero-content" },
+          { name: "Klarna content", path: "/admin/klarna-content" },
+          { name: "Recommended section", path: "/admin/recommended-section" },
+          { name: "Expert section", path: "/admin/expert-section" },
+          { name: "Occasion content", path: "/admin/occasion-content" },
+          { name: "Country section", path: "/admin/country-section" },
+          { name: "Header content", path: "/admin/header-content" },
+          { name: "Footer content", path: "/admin/footer-content" },
+          { name: "General content", path: "/admin/general-content" },
+          { name: "FAQs", path: "/admin/faqs" },
+        ],
+      },
+      {
+        icon: <PageIcon />,
+        name: "Get Visa page",
+        subItems: [
+          { name: "Slider content", path: "/admin/slider-content" },
+          { name: "Process content", path: "/admin/process-content" },
+          { name: "Comparison section", path: "/admin/comparison-section" },
+          { name: "Visa pricing", path: "/admin/visa-pricing" },
+          { name: "Visa countries", path: "/admin/visa-countries" },
+          { name: "Appointment text", path: "/admin/appointment-text" },
+        ],
+      },
+    ],
   },
   {
-    icon: <UserCircleIcon />,
-    name: "Admins",
-    path: "/admin/admins",
+    title: "Users",
+    items: [
+      { icon: <UserCircleIcon />, name: "Customers", path: "/admin/users" },
+      { icon: <UserCircleIcon />, name: "Team admins", path: "/admin/admins" },
+      { icon: <UserCircleIcon />, name: "Roles", path: "/admin/roles" },
+      { icon: <UserCircleIcon />, name: "Popup submissions", path: "/admin/popup-submissions" },
+      { icon: <UserCircleIcon />, name: "Feedback", path: "/admin/feedback" },
+    ],
   },
   {
-    icon: <UserCircleIcon />,
-    name: "Roles",
-    path: "/admin/roles",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Appointment Text",
-    path: "/admin/appointment-text",
-  },
-  {
-    icon: <PageIcon />,
-    name: "FAQs",
-    path: "/admin/faqs",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Country Section",
-    path: "/admin/country-section",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Comparison Section",
-    path: "/admin/comparison-section",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Visa Pricing",
-    path: "/admin/visa-pricing",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Visa Countries",
-    path: "/admin/visa-countries",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Header Content",
-    path: "/admin/header-content",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Footer Content",
-    path: "/admin/footer-content",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Hero Content",
-    path: "/admin/hero-content",
-  },
-  {
-    icon: <PageIcon />,
-    name: "General Content",
-    path: "/admin/general-content",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Slider Content",
-    path: "/admin/slider-content",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Klarna Content",
-    path: "/admin/klarna-content",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Process Content",
-    path: "/admin/process-content",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Email Templates",
-    path: "/admin/email-templates",
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "Popup Submissions",
-    path: "/admin/popup-submissions",
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "Feedback",
-    path: "/admin/feedback",
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "Popup Content",
-    path: "/admin/popup-content",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Occasion Content",
-    path: "/admin/occasion-content",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Recommended Section",
-    path: "/admin/recommended-section",
-  },
-  {
-    icon: <PageIcon />,
-    name: "Expert Section",
-    path: "/admin/expert-section",
+    title: "Settings",
+    items: [
+      { icon: <PageIcon />, name: "Email templates", path: "/admin/email-templates" },
+      { icon: <UserCircleIcon />, name: "Popup content", path: "/admin/popup-content" },
+      { icon: <PageIcon />, name: "Site content", path: "/admin/content" },
+      { icon: <PageIcon />, name: "Sent emails", path: "/admin/sent-emails" },
+    ],
   },
 ];
 
@@ -156,50 +98,106 @@ const AppSidebar: React.FC = () => {
   const pathname = usePathname();
   const can = useCan();
 
-  const navItems = React.useMemo(() => {
-    // Filter by permissions where applicable
-    return baseNavItems.filter((item) => {
-      if (!item.path) return true;
-      if (item.path.startsWith('/admin/applications')) return can('applications', 'read');
-      if (item.path.startsWith('/admin/users')) return can('users', 'read');
-      if (item.path.startsWith('/admin/admins')) return can('users', 'read');
-      if (item.path.startsWith('/admin/appointment-text')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/faqs')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/country-section')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/comparison-section')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/visa-pricing')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/visa-countries')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/header-content')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/footer-content')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/slider-content')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/klarna-content')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/process-content')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/hero-content')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/general-content')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/email-templates')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/roles')) return can('roles', 'read');
-      if (item.path.startsWith('/admin/popup-submissions')) return can('users', 'read');
-      if (item.path.startsWith('/admin/feedback')) return can('users', 'read');
-      if (item.path.startsWith('/admin/popup-content')) return can('users', 'read');
-      if (item.path.startsWith('/admin/occasion-content')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/recommended-section')) return can('siteContent', 'read');
-      if (item.path.startsWith('/admin/expert-section')) return can('siteContent', 'read');
-      return true;
-    });
-  }, [can]);
+  const [openSubmenu, setOpenSubmenu] = useState<{
+    sectionTitle: string;
+    index: number;
+  } | null>(null);
 
-  const renderMenuItems = (
-    navItems: NavItem[],
-    menuType: "main" | "others"
-  ) => (
+  const canSeePath = React.useCallback(
+    (path: string) => {
+      if (path.startsWith('/admin/applications')) return can('applications', 'read');
+      if (path.startsWith('/admin/users')) return can('users', 'read');
+      if (path.startsWith('/admin/admins')) return can('users', 'read');
+      if (path.startsWith('/admin/appointment-text')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/faqs')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/country-section')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/comparison-section')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/visa-pricing')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/visa-countries')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/header-content')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/footer-content')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/slider-content')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/klarna-content')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/process-content')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/hero-content')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/general-content')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/content')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/sent-emails')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/email-templates')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/roles')) return can('roles', 'read');
+      if (path.startsWith('/admin/popup-submissions')) return can('users', 'read');
+      if (path.startsWith('/admin/feedback')) return can('users', 'read');
+      if (path.startsWith('/admin/popup-content')) return can('users', 'read');
+      if (path.startsWith('/admin/occasion-content')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/recommended-section')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/expert-section')) return can('siteContent', 'read');
+      return true;
+    },
+    [can]
+  );
+
+  const canSeeNavItem = React.useCallback(
+    (item: NavItem) => {
+      if (item.subItems?.length) {
+        return item.subItems.some((subItem) => canSeePath(subItem.path));
+      }
+      if (!item.path) return true;
+      return canSeePath(item.path);
+    },
+    [canSeePath]
+  );
+
+  const filteredSections = React.useMemo(
+    () =>
+      navSections
+        .map((section) => ({
+          ...section,
+          items: section.items
+            .map((item) => {
+              if (!item.subItems?.length) return item;
+              const subItems = item.subItems.filter((subItem) =>
+                canSeePath(subItem.path)
+              );
+              if (!subItems.length) return null;
+              return { ...item, subItems };
+            })
+            .filter((item): item is NavItem => item !== null && canSeeNavItem(item)),
+        }))
+        .filter((section) => section.items.length > 0),
+    [canSeeNavItem, canSeePath]
+  );
+
+  const isSubmenuOpen = (sectionTitle: string, index: number) =>
+    openSubmenu?.sectionTitle === sectionTitle && openSubmenu?.index === index;
+
+  const handleSubmenuToggle = (sectionTitle: string, index: number) => {
+    setOpenSubmenu((prev) => {
+      if (
+        prev &&
+        prev.sectionTitle === sectionTitle &&
+        prev.index === index
+      ) {
+        return null;
+      }
+      return { sectionTitle, index };
+    });
+  };
+
+  const isActive = useCallback(
+    (path: string) => path === pathname,
+    [pathname]
+  );
+
+  const renderMenuItems = (sectionItems: NavItem[], sectionTitle: string) => (
     <ul className="flex flex-col gap-4">
-      {navItems.map((nav, index) => (
+      {sectionItems.map((nav, index) => (
         <li key={nav.name}>
           {nav.subItems ? (
             <button
-              onClick={() => handleSubmenuToggle(index, menuType)}
+              type="button"
+              onClick={() => handleSubmenuToggle(sectionTitle, index)}
               className={`menu-item group  ${
-                openSubmenu?.type === menuType && openSubmenu?.index === index
+                isSubmenuOpen(sectionTitle, index)
                   ? "menu-item-active"
                   : "menu-item-inactive"
               } cursor-pointer ${
@@ -210,7 +208,7 @@ const AppSidebar: React.FC = () => {
             >
               <span
                 className={` ${
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
+                  isSubmenuOpen(sectionTitle, index)
                     ? "menu-item-icon-active"
                     : "menu-item-icon-inactive"
                 }`}
@@ -223,8 +221,7 @@ const AppSidebar: React.FC = () => {
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
                   className={`ml-auto w-5 h-5 transition-transform duration-200  ${
-                    openSubmenu?.type === menuType &&
-                    openSubmenu?.index === index
+                    isSubmenuOpen(sectionTitle, index)
                       ? "rotate-180 text-brand-500"
                       : ""
                   }`}
@@ -256,57 +253,54 @@ const AppSidebar: React.FC = () => {
           )}
           {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
             <div
-              ref={(el) => {
-                subMenuRefs.current[`${menuType}-${index}`] = el;
-              }}
-              className="overflow-hidden transition-all duration-300"
-              style={{
-                height:
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? `${subMenuHeight[`${menuType}-${index}`]}px`
-                    : "0px",
-              }}
+              className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                isSubmenuOpen(sectionTitle, index)
+                  ? "grid-rows-[1fr]"
+                  : "grid-rows-[0fr]"
+              }`}
             >
-              <ul className="mt-2 space-y-1 ml-9">
-                {nav.subItems.map((subItem) => (
-                  <li key={subItem.name}>
-                    <Link
-                      href={subItem.path}
-                      className={`menu-dropdown-item ${
-                        isActive(subItem.path)
-                          ? "menu-dropdown-item-active"
-                          : "menu-dropdown-item-inactive"
-                      }`}
-                    >
-                      {subItem.name}
-                      <span className="flex items-center gap-1 ml-auto">
-                        {subItem.new && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
-                          >
-                            new
-                          </span>
-                        )}
-                        {subItem.pro && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
-                          >
-                            pro
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <div className="overflow-hidden">
+                <ul className="mt-2 space-y-1 ml-9">
+                  {nav.subItems.map((subItem) => (
+                    <li key={subItem.name}>
+                      <Link
+                        href={subItem.path}
+                        className={`menu-dropdown-item ${
+                          isActive(subItem.path)
+                            ? "menu-dropdown-item-active"
+                            : "menu-dropdown-item-inactive"
+                        }`}
+                      >
+                        {subItem.name}
+                        <span className="flex items-center gap-1 ml-auto">
+                          {subItem.new && (
+                            <span
+                              className={`ml-auto ${
+                                isActive(subItem.path)
+                                  ? "menu-dropdown-badge-active"
+                                  : "menu-dropdown-badge-inactive"
+                              } menu-dropdown-badge `}
+                            >
+                              new
+                            </span>
+                          )}
+                          {subItem.pro && (
+                            <span
+                              className={`ml-auto ${
+                                isActive(subItem.path)
+                                  ? "menu-dropdown-badge-active"
+                                  : "menu-dropdown-badge-inactive"
+                              } menu-dropdown-badge `}
+                            >
+                              pro
+                            </span>
+                          )}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           )}
         </li>
@@ -314,69 +308,42 @@ const AppSidebar: React.FC = () => {
     </ul>
   );
 
-  const [openSubmenu, setOpenSubmenu] = useState<{
-    type: "main" | "others";
-    index: number;
-  } | null>(null);
-  const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>(
-    {}
-  );
-  const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  // const isActive = (path: string) => path === pathname;
-   const isActive = useCallback((path: string) => path === pathname, [pathname]);
-
+  // Auto-expand the submenu that contains the active route (pathname only).
   useEffect(() => {
-    // Check if the current path matches any submenu item
-    let submenuMatched = false;
-    ["main", "others"].forEach((menuType) => {
-      const items = menuType === "main" ? navItems : othersItems;
-      items.forEach((nav, index) => {
-        if (nav.subItems) {
-          nav.subItems.forEach((subItem) => {
-            if (isActive(subItem.path)) {
-              setOpenSubmenu({
-                type: menuType as "main" | "others",
-                index,
-              });
-              submenuMatched = true;
-            }
-          });
+    let matched: { sectionTitle: string; index: number } | null = null;
+
+    filteredSections.forEach((section) => {
+      section.items.forEach((nav, index) => {
+        if (!nav.subItems) return;
+        nav.subItems.forEach((subItem) => {
+          if (subItem.path === pathname) {
+            matched = { sectionTitle: section.title, index };
+          }
+        });
+      });
+    });
+
+    othersItems.forEach((nav, index) => {
+      if (!nav.subItems) return;
+      nav.subItems.forEach((subItem) => {
+        if (subItem.path === pathname) {
+          matched = { sectionTitle: "others", index };
         }
       });
     });
 
-    // If no submenu item matches, close the open submenu
-    if (!submenuMatched) {
-      setOpenSubmenu(null);
+    if (matched) {
+      setOpenSubmenu((prev) => {
+        if (
+          prev?.sectionTitle === matched.sectionTitle &&
+          prev?.index === matched.index
+        ) {
+          return prev;
+        }
+        return matched;
+      });
     }
-  }, [pathname, isActive, navItems]);
-
-  useEffect(() => {
-    // Set the height of the submenu items when the submenu is opened
-    if (openSubmenu !== null) {
-      const key = `${openSubmenu.type}-${openSubmenu.index}`;
-      if (subMenuRefs.current[key]) {
-        setSubMenuHeight((prevHeights) => ({
-          ...prevHeights,
-          [key]: subMenuRefs.current[key]?.scrollHeight || 0,
-        }));
-      }
-    }
-  }, [openSubmenu]);
-
-  const handleSubmenuToggle = (index: number, menuType: "main" | "others") => {
-    setOpenSubmenu((prevOpenSubmenu) => {
-      if (
-        prevOpenSubmenu &&
-        prevOpenSubmenu.type === menuType &&
-        prevOpenSubmenu.index === index
-      ) {
-        return null;
-      }
-      return { type: menuType, index };
-    });
-  };
+  }, [pathname, filteredSections]);
 
   return (
     <aside
@@ -428,24 +395,25 @@ const AppSidebar: React.FC = () => {
       </div>
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "Menu"
-                ) : (
-                  <HorizontaLDots />
-                )}
-              </h2>
-              {renderMenuItems(navItems, "main")}
-            </div>
-
+          <div className="flex flex-col gap-6">
+            {filteredSections.map((section) => (
+              <div key={section.title}>
+                <h2
+                  className={`mb-3 text-xs uppercase flex leading-[20px] text-gray-400 ${
+                    !isExpanded && !isHovered
+                      ? "lg:justify-center"
+                      : "justify-start"
+                  }`}
+                >
+                  {isExpanded || isHovered || isMobileOpen ? (
+                    section.title
+                  ) : (
+                    <HorizontaLDots />
+                  )}
+                </h2>
+                {renderMenuItems(section.items, section.title)}
+              </div>
+            ))}
           </div>
         </nav>
         {/* {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null} */}

@@ -1,9 +1,41 @@
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { seedComparisonSection } from './seeds/comparison-seed';
 import { seedHeroContent } from './seeds/hero-content';
 import { seedSliderContent } from './seeds/slider-content';
 import { seedOccasionContent } from './seeds/occasion-seed';
+import { seedVisaCountries } from './seeds/visa-countries-seed';
+
+/** Load DATABASE_URL from .env.local (Prisma CLI does not load it by default). */
+function loadEnvFiles() {
+  const candidates = [
+    resolve(__dirname, '../.env.local'),
+    resolve(__dirname, '../.env'),
+    resolve(__dirname, '../../NUvisa-backend/.env'),
+  ];
+  for (const envPath of candidates) {
+    if (!existsSync(envPath)) continue;
+    for (const line of readFileSync(envPath, 'utf-8').split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq === -1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      let value = trimmed.slice(eq + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      if (!process.env[key]) process.env[key] = value;
+    }
+  }
+}
+
+loadEnvFiles();
 
 const prisma = new PrismaClient();
 
@@ -28,11 +60,18 @@ async function main() {
     },
   });
 
+  const defaultAdminEmail = 'admin@nuvisa.com';
   const admin = await prisma.admin.upsert({
-    where: { email: 'admin@nuvisa.com' },
-    update: {},
+    where: { email: defaultAdminEmail },
+    update: {
+      password: hashedPassword,
+      name: 'Super Admin',
+      role: 'SUPER_ADMIN',
+      roleId: managerRole.id,
+      isActive: true,
+    },
     create: {
-      email: 'admin@nuvisa.com',
+      email: defaultAdminEmail,
       password: hashedPassword,
       name: 'Super Admin',
       role: 'SUPER_ADMIN',
@@ -108,6 +147,8 @@ async function main() {
 
   // Seed occasion content
   await seedOccasionContent();
+
+  await seedVisaCountries(prisma);
 
   // Seed default email templates
   const emailTemplatesData = [
