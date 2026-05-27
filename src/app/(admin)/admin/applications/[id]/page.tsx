@@ -12,10 +12,48 @@ import {
   downloadFileWithFallback,
   formatStatusForEmail,
 } from '@/lib/utils';
+import {
+  getPassportAdminStatusKeyFromBackend,
+  getPassportStatusMessage,
+  getAdminStatusLabelForKey,
+  type PassportAdminStatusKey,
+} from '@/lib/passportStatusMessages';
 import Button from '@/components/ui/button/Button';
 import ComponentCard from '@/components/common/ComponentCard';
 import { ArrowLeft } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+
+function getApplicationStatusLabel(app: Application & { adminStatusKey?: string; statusDisplay?: string }) {
+  const key = String((app as any).adminStatusKey || app.status || '').toUpperCase();
+  if (key === 'DECISION_MADE' || key === 'PASSPORT_DISPATCHED' || key === 'PASSPORT_READY') {
+    return getAdminStatusLabelForKey(key as PassportAdminStatusKey);
+  }
+  const display = (app as any).statusDisplay;
+  if (display) return display;
+  return String(app.status || '').replace(/_/g, ' ');
+}
+
+const CASE_PROGRESS_STEPS = [
+  { key: 'submitted', label: 'Submitted', pct: 20 },
+  { key: 'under_review', label: 'Under review', pct: 40 },
+  { key: 'processing', label: 'Processing', pct: 55 },
+  { key: 'appointment_booked', label: 'Appointment', pct: 70 },
+  { key: 'at_embassy', label: 'At embassy', pct: 85 },
+  { key: 'approved', label: 'Approved', pct: 100 },
+  { key: 'completed', label: 'Completed', pct: 100 },
+];
+
+function progressForApplicationStatus(status?: string) {
+  const s = String(status || 'submitted').toLowerCase().replace(/\s+/g, '_');
+  const step = CASE_PROGRESS_STEPS.find(
+    (p) => s.includes(p.key.replace(/_/g, '')) || s === p.key
+  );
+  if (step) return step.pct;
+  if (s.includes('review')) return 40;
+  if (s.includes('reject') || s.includes('cancel')) return 100;
+  if (s.includes('pending')) return 10;
+  return 25;
+}
 
 export default function ApplicationDetailsPage() {
   const params = useParams();
@@ -24,12 +62,19 @@ export default function ApplicationDetailsPage() {
   const [application, setApplication] = useState<Application | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [newStatus, setNewStatus] = useState<ApplicationStatus | ''>('');
+  const [newStatus, setNewStatus] = useState<string>('');
   const [comment, setComment] = useState('');
   const [sendNotification, setSendNotification] = useState(true);
   const [comments, setComments] = useState<any[]>([]);
   const [isInternalComment, setIsInternalComment] = useState(true);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<
+    { id: string; email: string; name?: string }[]
+  >([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [assigneeId, setAssigneeId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [loadingActivity, setLoadingActivity] = useState(false);
 
   const fetchApplication = useCallback(async () => {
     setLoading(true);
@@ -38,16 +83,18 @@ export default function ApplicationDetailsPage() {
       const envelope: any = response.data as any;
       const d: any = envelope?.results ?? envelope; // unwrap backend { data: { results } } shape
 
-      const mapBackendStatus = (s?: string): ApplicationStatus => {
+      const mapBackendStatus = (s?: string, statusDisplay?: string): string => {
         const v = (s || '').toLowerCase();
-        if (v === 'new' || v === 'draft') return 'PENDING' as ApplicationStatus;
-        if (v === 'submitted') return 'SUBMITTED' as ApplicationStatus;
-        if (v === 'under_review' || v === 'processing') return 'UNDER_REVIEW' as ApplicationStatus;
-        if (v === 'appointment_booked') return 'APPOINTMENT_BOOKED' as ApplicationStatus;
-        if (v === 'at_embassy') return 'AT_EMBASSY' as ApplicationStatus;
-        if (v === 'decision_made' || v === 'approved' || v === 'rejected' || v === 'cancelled') return 'DECISION_MADE' as ApplicationStatus;
-        if (v === 'completed') return 'COMPLETED' as ApplicationStatus;
-        return (v.toUpperCase() as ApplicationStatus) || ('PENDING' as ApplicationStatus);
+        if (v === 'new' || v === 'draft') return 'PENDING';
+        if (v === 'submitted') return 'SUBMITTED';
+        if (v === 'under_review' || v === 'processing') return 'UNDER_REVIEW';
+        if (v === 'appointment_booked') return 'APPOINTMENT_BOOKED';
+        if (v === 'at_embassy') return 'AT_EMBASSY';
+        if (v === 'decision_made' || v === 'approved' || v === 'rejected' || v === 'cancelled') {
+          return getPassportAdminStatusKeyFromBackend(s, statusDisplay);
+        }
+        if (v === 'completed') return 'COMPLETED';
+        return (v.toUpperCase() as ApplicationStatus) || 'PENDING';
       };
       // Calculate total payment from all travelers
       const calculateTotalPayment = (travelers: any[]) => {
@@ -67,7 +114,11 @@ export default function ApplicationDetailsPage() {
         id: d.id || d.applicationId || String(params.id),
         // Use formatted application number from backend, with fallback to formatting logic
         applicationNo: d.formattedApplicationId || d.applicationNo || d.code || d.id?.slice(0, 8) || String(params.id).slice(0, 8),
-        status: mapBackendStatus(d.status || d.applicationStatus),
+        status: (d.adminStatusKey ||
+          mapBackendStatus(
+            d.status || d.applicationStatus,
+            d.statusDisplay || d.statusMessage
+          )) as ApplicationStatus,
         totalAmount: totalPaymentFromTravelers || Number(d.totalAmount ?? d.amountPaidTotal ?? d.amountPaid ?? 0),
         paidAmount: totalPaymentFromTravelers || Number(d.paidAmount ?? d.amountPaidTotal ?? d.amountPaid ?? 0),
         submittedAt: d.submittedAt || d.createdAt || d.paymentDate || new Date().toISOString(),
@@ -83,8 +134,14 @@ export default function ApplicationDetailsPage() {
       (normalized as any).numberOfTravellers = d.numberOfTravellers;
       (normalized as any).insuranceDetails = d.insuranceDetails;
       (normalized as any).travelersData = d.travelersData;
+      (normalized as any).adminStatusKey = d.adminStatusKey || null;
+      (normalized as any).statusDisplay = d.statusDisplay || d.statusMessage || null;
       // Appointment preferences (top-level or first traveler fallback)
       (normalized as any).appointment = d.appointment || (Array.isArray(d.travelersData) && d.travelersData[0]?.appointment) || undefined;
+      (normalized as any).assignedAdminId = d.assignedAdminId || null;
+      (normalized as any).assignedAdminEmail = d.assignedAdminEmail || null;
+      (normalized as any).assignedAdminName = d.assignedAdminName || null;
+      setAssigneeId(d.assignedAdminId || '');
 
       // Normalize documents from backend shape (travelersData[].documents.documents)
       try {
@@ -131,7 +188,12 @@ export default function ApplicationDetailsPage() {
         }
       } catch {}
       setApplication(normalized as any);
-      setNewStatus(normalized.status);
+      setNewStatus(
+        mapBackendStatus(
+          normalized.status || normalized.applicationStatus,
+          normalized.statusDisplay || normalized.statusMessage
+        )
+      );
     }
     setLoading(false);
   }, [params.id]);
@@ -147,10 +209,62 @@ export default function ApplicationDetailsPage() {
     }
   }, [params.id]);
 
+  const fetchTeamMembers = useCallback(async () => {
+    try {
+      const response = await apiClient.get<{ id: string; email: string; name?: string }[]>(
+        '/team-members'
+      );
+      if (response.success && Array.isArray(response.data)) {
+        setTeamMembers(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+    }
+  }, []);
+
+  const fetchActivityLog = useCallback(async () => {
+    setLoadingActivity(true);
+    try {
+      const response = await apiClient.get(`/applications/${params.id}/log`);
+      if (response.success && Array.isArray(response.data)) {
+        setActivities(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching activity log:', error);
+    } finally {
+      setLoadingActivity(false);
+    }
+  }, [params.id]);
+
   useEffect(() => {
     fetchApplication();
     fetchComments();
-  }, [fetchApplication, fetchComments]);
+    fetchTeamMembers();
+    fetchActivityLog();
+  }, [fetchApplication, fetchComments, fetchTeamMembers, fetchActivityLog]);
+
+  const handleAssign = useCallback(async () => {
+    const member = teamMembers.find((m) => m.id === assigneeId);
+    setAssigning(true);
+    try {
+      const response = await apiClient.patch(`/applications/${params.id}/assign`, {
+        assignedAdminId: assigneeId || null,
+        assignedAdminEmail: member?.email || null,
+        assignedAdminName: member?.name || member?.email || null,
+      });
+      if (response.success) {
+        await fetchApplication();
+        await fetchActivityLog();
+      } else {
+        alert(response.error || 'Failed to assign application');
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Assign failed: ${message}`);
+    } finally {
+      setAssigning(false);
+    }
+  }, [assigneeId, teamMembers, params.id, fetchApplication, fetchActivityLog]);
 
   const handleStatusUpdate = useCallback(async () => {
     if (!newStatus || newStatus === application?.status) return;
@@ -160,13 +274,19 @@ export default function ApplicationDetailsPage() {
       const response = await apiClient.patch(`/applications/${params.id}`, {
         status: newStatus,
         oldStatus: formatStatusForEmail(String(application?.status || '')),
-        statusDisplay: formatStatusForEmail(String(newStatus)),
+        statusDisplay:
+          ['DECISION_MADE', 'PASSPORT_DISPATCHED', 'PASSPORT_READY'].includes(
+            String(newStatus).toUpperCase()
+          )
+            ? getAdminStatusLabelForKey(newStatus as PassportAdminStatusKey)
+            : formatStatusForEmail(String(newStatus)),
         note: comment,
         sendNotification,
       });
 
       if (response.success) {
         await fetchApplication();
+        await fetchActivityLog();
         setComment('');
         // Show success message
         console.log('Status updated successfully');
@@ -183,7 +303,7 @@ export default function ApplicationDetailsPage() {
     } finally {
       setUpdating(false);
     }
-  }, [newStatus, application?.status, params.id, comment, sendNotification, fetchApplication]);
+  }, [newStatus, application?.status, params.id, comment, sendNotification, fetchApplication, fetchActivityLog]);
 
   const handleAddComment = useCallback(async () => {
     if (!comment.trim()) return;
@@ -273,8 +393,22 @@ export default function ApplicationDetailsPage() {
                     application.status
                   )}`}
                 >
-                  {(application.status || '').replace('_', ' ')}
+                  {getApplicationStatusLabel(application)}
                 </span>
+              </div>
+              <div className="col-span-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Case progress</p>
+                <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#7350FF] transition-all duration-300"
+                    style={{
+                      width: `${progressForApplicationStatus(String(application.status || ''))}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {progressForApplicationStatus(String(application.status || ''))}% complete
+                </p>
               </div>
               {canViewAmounts(session?.user) && (
                 <>
@@ -1075,6 +1209,63 @@ export default function ApplicationDetailsPage() {
         </div>
 
         <div className="space-y-6">
+          <ComponentCard title="Assigned To">
+            <div className="space-y-3">
+              <select
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                value={assigneeId}
+                onChange={(e) => setAssigneeId(e.target.value)}
+              >
+                <option value="">Unassigned</option>
+                {teamMembers.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name || member.email}
+                  </option>
+                ))}
+              </select>
+              {(application as any)?.assignedAdminName && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Current: {(application as any).assignedAdminName}
+                </p>
+              )}
+              <Button
+                onClick={handleAssign}
+                disabled={assigning}
+                className="w-full"
+                variant="outline"
+              >
+                {assigning ? 'Saving...' : 'Save assignment'}
+              </Button>
+            </div>
+          </ComponentCard>
+
+          <ComponentCard title="Activity Log">
+            {loadingActivity ? (
+              <p className="text-sm text-gray-500">Loading activity...</p>
+            ) : activities.length === 0 ? (
+              <p className="text-sm text-gray-500">No activity recorded yet.</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {activities.map((entry: any, index: number) => (
+                  <div
+                    key={entry.id || index}
+                    className="border-l-2 border-gray-300 dark:border-gray-600 pl-3 py-1"
+                  >
+                    <p className="text-sm text-gray-900 dark:text-white">
+                      {entry.description || entry.action || entry.type || 'Update'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {(entry.timestamp || entry.createdAt)
+                        ? formatDate(entry.timestamp || entry.createdAt, 'datetime')
+                        : ''}
+                      {entry.adminEmail ? ` · ${entry.adminEmail}` : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ComponentCard>
+
           <ComponentCard title="Update Status">
             <div className="space-y-4">
               <div>
@@ -1084,14 +1275,16 @@ export default function ApplicationDetailsPage() {
                 <select
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as ApplicationStatus)}
+                  onChange={(e) => setNewStatus(e.target.value)}
                 >
                   <option value="PENDING">Pending (New/Draft)</option>
                   <option value="SUBMITTED">Submitted</option>
                   <option value="UNDER_REVIEW">Under Review</option>
                   <option value="APPOINTMENT_BOOKED">Appointment Booked</option>
                   <option value="AT_EMBASSY">At Embassy</option>
-                  <option value="DECISION_MADE">Decision Made, Passport Dispatched/Ready</option>
+                  <option value="DECISION_MADE">Decision made</option>
+                  <option value="PASSPORT_DISPATCHED">Dispatched</option>
+                  <option value="PASSPORT_READY">Ready</option>
                 </select>
               </div>
 
