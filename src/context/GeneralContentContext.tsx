@@ -31,11 +31,14 @@ export function GeneralContentProvider({
 
   const refresh = useCallback(async (options?: { silent?: boolean }) => {
     if (!options?.silent) setLoading(true);
-    const response = await apiClient.get<SiteContent[]>("/content");
-    if (response.success && Array.isArray(response.data)) {
-      setRows(response.data);
+    try {
+      const response = await apiClient.get<SiteContent[]>("/content");
+      if (response.success && Array.isArray(response.data)) {
+        setRows(response.data);
+      }
+    } finally {
+      if (!options?.silent) setLoading(false);
     }
-    if (!options?.silent) setLoading(false);
   }, []);
 
   useEffect(() => {

@@ -19,6 +19,10 @@ const DEFAULT_TOOLTIP =
 export default function PriceMatchContentForm() {
   const { byKey, rows, loading, refresh } = useContentByKey();
   const [saving, setSaving] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [title, setTitle] = useState(DEFAULT_TITLE);
   const [description, setDescription] = useState(DEFAULT_DESCRIPTION);
   const [tooltip, setTooltip] = useState(DEFAULT_TOOLTIP);
@@ -41,28 +45,36 @@ export default function PriceMatchContentForm() {
     setLastUpdated(updatedTimes.length ? new Date(Math.max(...updatedTimes)) : null);
   }, [loading, rows, byKey]);
 
-  const saveContent = async (key: string, value: string) => {
-    const response = await apiClient.post("/content", {
-      key,
-      value,
-      type: "text",
-    });
-    return response.success;
-  };
-
   const handleUpdate = async () => {
     setSaving(true);
+    setStatusMessage(null);
 
-    const results = await Promise.all([
-      saveContent(PRICE_MATCH_TITLE_KEY, title.trim()),
-      saveContent(PRICE_MATCH_DESCRIPTION_KEY, description.trim()),
-      saveContent(PRICE_MATCH_TOOLTIP_KEY, tooltip.trim()),
-    ]);
+    const payloads = [
+      { key: PRICE_MATCH_TITLE_KEY, value: title.trim() },
+      { key: PRICE_MATCH_DESCRIPTION_KEY, value: description.trim() },
+      { key: PRICE_MATCH_TOOLTIP_KEY, value: tooltip.trim() },
+    ];
 
-    if (results.every(Boolean)) {
+    const responses = await Promise.all(
+      payloads.map(({ key, value }) =>
+        apiClient.post("/content", { key, value, type: "text" })
+      )
+    );
+
+    if (responses.every((response) => response.success)) {
       await refresh({ silent: true });
+      setStatusMessage({
+        type: "success",
+        text: "Saved. The homepage guarantee section updates within a few seconds.",
+      });
     } else {
-      alert("Failed to update price match content");
+      const firstError = responses.find((response) => !response.success)?.error;
+      setStatusMessage({
+        type: "error",
+        text:
+          firstError ||
+          "Failed to update price match content. Sign in again if your session expired.",
+      });
     }
 
     setSaving(false);
@@ -125,6 +137,19 @@ export default function PriceMatchContentForm() {
             Shown when visitors hover or tap the (i) icon next to the title.
           </p>
         </div>
+
+        {statusMessage && (
+          <p
+            className={
+              statusMessage.type === "success"
+                ? "text-sm text-green-600 dark:text-green-400"
+                : "text-sm text-red-600 dark:text-red-400"
+            }
+            role="status"
+          >
+            {statusMessage.text}
+          </p>
+        )}
 
         <div className="flex items-center gap-3">
           <Button onClick={handleUpdate} disabled={saving}>

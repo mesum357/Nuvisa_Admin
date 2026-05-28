@@ -132,6 +132,23 @@ async function main() {
         value: '',
         type: 'text',
       },
+      {
+        key: 'price_match_title',
+        value: 'The NUvisa Price Match Promise',
+        type: 'text',
+      },
+      {
+        key: 'price_match_description',
+        value:
+          "At NUvisa, we want you to get your Schengen visa with total confidence, that's why we regularly review our prices. In fact, we promise to match any like-for-like Schengen visa price, so you can apply with peace of mind.",
+        type: 'text',
+      },
+      {
+        key: 'price_match_tooltip',
+        value:
+          "We pride ourselves on our fair prices, expertise, and simplicity. Meaning you won't find better value elsewhere, thanks to our unbeatable prices. Find it cheaper, and we'll match the price — that's a promise.",
+        type: 'text',
+      },
     ],
     skipDuplicates: true,
   });
