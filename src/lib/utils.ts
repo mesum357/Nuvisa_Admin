@@ -7,6 +7,20 @@ export function resolveStoredFileUrl(rawUrl?: string | null): string | null {
   return resolveBackendFileUrl(rawUrl);
 }
 
+/** Proxy file through admin API — works with localhost URLs stored in DB. */
+export function getAdminFileProxyUrl(
+  rawUrl: string,
+  fileName: string,
+  inline = false
+): string {
+  const params = new URLSearchParams({
+    url: rawUrl,
+    name: fileName || 'file',
+  });
+  if (inline) params.set('inline', '1');
+  return `/api/download?${params.toString()}`;
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -145,11 +159,9 @@ export function downloadCSV(data: any[], filename: string): void {
 export function downloadFile(fileUrl: string, fileName: string): Promise<void> {
   return new Promise(async (resolve, reject) => {
     try {
-      const resolvedUrl = resolveStoredFileUrl(fileUrl) || fileUrl;
+      const proxyUrl = getAdminFileProxyUrl(fileUrl, fileName, false);
       // Method 1: Use our download proxy API (most reliable)
       try {
-        const proxyUrl = `/api/download?url=${encodeURIComponent(resolvedUrl)}&name=${encodeURIComponent(fileName)}`;
-        
         const response = await fetch(proxyUrl, {
           method: 'GET',
           credentials: 'same-origin',
@@ -184,7 +196,7 @@ export function downloadFile(fileUrl: string, fileName: string): Promise<void> {
       
       // Method 2: Direct fetch + blob approach
       try {
-        const response = await fetch(resolvedUrl, {
+        const response = await fetch(fileUrl, {
           method: 'GET',
           mode: 'cors',
           credentials: 'omit',
@@ -223,7 +235,7 @@ export function downloadFile(fileUrl: string, fileName: string): Promise<void> {
       // Method 3: Direct download with proper attributes
       try {
         const link = document.createElement('a');
-        link.href = resolvedUrl;
+        link.href = proxyUrl;
         link.download = fileName;
         link.style.display = 'none';
         

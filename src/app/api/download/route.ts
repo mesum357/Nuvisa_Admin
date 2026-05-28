@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveBackendFileUrl } from '@/lib/config';
+import { resolveBackendFileUrlForFetch } from '@/lib/config';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const rawUrl = searchParams.get('url');
     const fileName = searchParams.get('name') || 'download';
+    const inline = searchParams.get('inline') === '1';
 
     if (!rawUrl) {
       return NextResponse.json({ error: 'File URL is required' }, { status: 400 });
     }
 
-    const fileUrl = resolveBackendFileUrl(rawUrl);
+    const fileUrl = resolveBackendFileUrlForFetch(rawUrl);
     if (!fileUrl) {
       return NextResponse.json({ error: 'Invalid file URL' }, { status: 400 });
     }
@@ -59,12 +60,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Return the file with proper headers to force download
+    const disposition = inline
+      ? `inline; filename="${fileName}"`
+      : `attachment; filename="${fileName}"`;
+
     return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${fileName}"`,
+        'Content-Disposition': disposition,
         'Content-Length': fileBuffer.byteLength.toString(),
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',

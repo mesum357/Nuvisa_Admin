@@ -8,9 +8,26 @@
  * PRODUCTION CONFIGURATION - Uses live backend
  */
 
+const stripTrailingSlash = (url: string) => url.replace(/\/+$/, '');
+
+/** Server-side fetches (download proxy, backend API). */
+export function getInternalBackendBaseUrl(): string {
+  return stripTrailingSlash(process.env.BACKEND_API_URL || 'http://localhost:4000');
+}
+
+/** Browser-facing file URLs (View in new tab). */
+export function getPublicBackendBaseUrl(): string {
+  return stripTrailingSlash(
+    process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+      process.env.BACKEND_PUBLIC_URL ||
+      process.env.BACKEND_API_URL ||
+      'http://localhost:4000'
+  );
+}
+
 export const BACKEND_CONFIG = {
   // Backend API URL - use local backend for development
-  BASE_URL: process.env.BACKEND_API_URL || 'http://localhost:4000',
+  BASE_URL: getInternalBackendBaseUrl(),
   
   // Admin origin for CORS headers
   ADMIN_ORIGIN: process.env.ADMIN_PUBLIC_URL || 'http://localhost:3001',
@@ -41,34 +58,42 @@ export function getBackendUrl(endpoint: string): string {
   return `${base}${path}`;
 }
 
-/**
- * Rewrite localhost/127.0.0.1 upload URLs stored in the DB to the configured backend.
- */
-export function resolveBackendFileUrl(rawUrl?: string | null): string | null {
-  if (rawUrl == null) return null;
-  const trimmed = String(rawUrl).trim();
-  if (!trimmed) return null;
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
-
-  const backendBase = BACKEND_CONFIG.BASE_URL.replace(/\/+$/, '');
+function rewriteFileUrlToBase(rawUrl: string, backendBase: string): string {
+  if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) return rawUrl;
 
   try {
-    const parsed = new URL(trimmed, backendBase);
+    const parsed = new URL(rawUrl, backendBase);
     const isLocalHost = /^(localhost|127\.0\.0\.1)$/i.test(parsed.hostname);
     if (isLocalHost && parsed.pathname) {
       return `${backendBase}${parsed.pathname}${parsed.search || ''}`;
     }
-    if (trimmed.startsWith('/')) {
-      return `${backendBase}${trimmed}`;
+    if (rawUrl.startsWith('/')) {
+      return `${backendBase}${rawUrl}`;
     }
-    return trimmed;
+    return rawUrl;
   } catch {
-    const path = trimmed.replace(/^\/+/, '');
+    const path = rawUrl.replace(/^\/+/, '');
     if (path.startsWith('uploads/')) {
       return `${backendBase}/${path}`;
     }
-    return trimmed;
+    return rawUrl;
   }
+}
+
+/** Rewrite stored upload URLs for browser display (public API host). */
+export function resolveBackendFileUrl(rawUrl?: string | null): string | null {
+  if (rawUrl == null) return null;
+  const trimmed = String(rawUrl).trim();
+  if (!trimmed) return null;
+  return rewriteFileUrlToBase(trimmed, getPublicBackendBaseUrl());
+}
+
+/** Rewrite stored upload URLs for server-side fetch (internal host). */
+export function resolveBackendFileUrlForFetch(rawUrl?: string | null): string | null {
+  if (rawUrl == null) return null;
+  const trimmed = String(rawUrl).trim();
+  if (!trimmed) return null;
+  return rewriteFileUrlToBase(trimmed, getInternalBackendBaseUrl());
 }
 
 /**

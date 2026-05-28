@@ -11,7 +11,7 @@ import {
   canViewAmounts,
   downloadFileWithFallback,
   formatStatusForEmail,
-  resolveStoredFileUrl,
+  getAdminFileProxyUrl,
 } from '@/lib/utils';
 import {
   getPassportAdminStatusKeyFromBackend,
@@ -159,9 +159,7 @@ export default function ApplicationDetailsPage() {
             const value = docContainer[docType];
             const pushDoc = (item: any, docIndex: number = 0) => {
               if (!item) return;
-              const fileUrl = resolveStoredFileUrl(
-                item.preview || item.fileUrl || item.url
-              );
+              const fileUrl = item.preview || item.fileUrl || item.url;
               const fileName = item.name || item.fileName || docType;
               const fileSize = Number(item.size || item.fileSize || 0);
               const uploadedAt = item.uploadedAt || traveler?.createdAt || d.updatedAt || d.createdAt || new Date().toISOString();
@@ -559,7 +557,7 @@ export default function ApplicationDetailsPage() {
                                 {cert.url && (
                                   <div className="flex gap-2">
                                     <a 
-                                      href={resolveStoredFileUrl(cert.url) || cert.url} 
+                                      href={getAdminFileProxyUrl(cert.url, `certificate-${index + 1}`, true)} 
                                       target="_blank" 
                                       rel="noopener noreferrer"
                                       className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
@@ -568,7 +566,7 @@ export default function ApplicationDetailsPage() {
                                     </a>
                                     <button
                                       onClick={() => handleDocumentDownload({ 
-                                        fileUrl: resolveStoredFileUrl(cert.url) || cert.url, 
+                                        fileUrl: cert.url, 
                                         fileName: `certificate-${index + 1}`,
                                         id: `cert-${index}`
                                       })}
@@ -998,7 +996,7 @@ export default function ApplicationDetailsPage() {
                                         </span>
                                         <div className="flex gap-2">
                                           <a 
-                                            href={resolveStoredFileUrl(traveler.insurance.insuranceCertificates) || traveler.insurance.insuranceCertificates} 
+                                            href={getAdminFileProxyUrl(traveler.insurance.insuranceCertificates, 'insurance-certificate', true)} 
                                             target="_blank" 
                                             rel="noopener noreferrer"
                                             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
@@ -1007,7 +1005,7 @@ export default function ApplicationDetailsPage() {
                                           </a>
                                           <button
                                             onClick={() => handleDocumentDownload({ 
-                                              fileUrl: resolveStoredFileUrl(traveler.insurance.insuranceCertificates) || traveler.insurance.insuranceCertificates, 
+                                              fileUrl: traveler.insurance.insuranceCertificates, 
                                               fileName: 'insurance-certificate',
                                               id: `insurance-cert-${traveler.id}`
                                             })}
@@ -1031,7 +1029,11 @@ export default function ApplicationDetailsPage() {
                                         </span>
                                         <div className="flex gap-2">
                                           <a 
-                                            href={resolveStoredFileUrl(insuranceData.file.preview || insuranceData.file.data) || insuranceData.file.preview || insuranceData.file.data} 
+                                            href={getAdminFileProxyUrl(
+                                              insuranceData.file.preview || insuranceData.file.data,
+                                              insuranceData.file.name || 'insurance-file',
+                                              true
+                                            )} 
                                             target="_blank" 
                                             rel="noopener noreferrer"
                                             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
@@ -1040,7 +1042,7 @@ export default function ApplicationDetailsPage() {
                                           </a>
                                           <button
                                             onClick={() => handleDocumentDownload({ 
-                                              fileUrl: resolveStoredFileUrl(insuranceData.file.preview || insuranceData.file.data) || insuranceData.file.preview || insuranceData.file.data, 
+                                              fileUrl: insuranceData.file.preview || insuranceData.file.data, 
                                               fileName: insuranceData.file.name || 'insurance-file',
                                               id: `insurance-file-${traveler.id}`
                                             })}
@@ -1164,7 +1166,7 @@ export default function ApplicationDetailsPage() {
                                   <span className="text-xs text-green-600 dark:text-green-400">Verified</span>
                                 )}
                                 <a
-                                  href={doc.fileUrl}
+                                  href={getAdminFileProxyUrl(doc.fileUrl, doc.fileName || doc.documentType, true)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400"
