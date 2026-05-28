@@ -12,7 +12,7 @@ export async function seedHeroContent() {
       update: {},
       create: {
         key: 'hero_title',
-        value: "Don't Postpone Your Happiness!",
+        value: "Don't Postpone Your Happines!",
         type: 'text',
         section: 'title',
         isActive: true,
@@ -23,10 +23,12 @@ export async function seedHeroContent() {
     // Hero description
     await prisma.heroContent.upsert({
       where: { key: 'hero_description' },
-      update: {},
+      update: {
+        value: 'Everyday Steals I £90 Germany I Our Guarantee+Link+/our-guarantee',
+      },
       create: {
         key: 'hero_description',
-        value: 'Flat £200 fee, faster processing, dedicated support',
+        value: 'Everyday Steals I £90 Germany I Our Guarantee+Link+/our-guarantee',
         type: 'text',
         section: 'description',
         isActive: true,

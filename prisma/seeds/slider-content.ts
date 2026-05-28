@@ -9,6 +9,12 @@ export async function seedSliderContent() {
     { key: 'badge_2_text', value: '100% Risk free', type: 'text', section: 'badges', order: 2 },
     { key: 'nri_badge_text', value: '765+ NRIs applied their Schengen visa today on NUvisa', type: 'text', section: 'badges', order: 3 },
 
+    // Get-visa page header (Slider.jsx)
+    { key: 'slider_header', value: 'Schengen visa from the UK', type: 'text', section: 'header', order: 1 },
+    { key: 'slider_description', value: 'Complete visa service end-to-end with all necessary documents', type: 'text', section: 'header', order: 2 },
+    { key: 'slider_save', value: 'You save ', type: 'text', section: 'header', order: 3 },
+    { key: 'slider_traditional', value: 'Traditional fee', type: 'text', section: 'header', order: 4 },
+
     // Notices
     { key: 'embassy_notice_text', value: 'Please note that embassy require you to pay £78 in person to a government official, either by cash or card.', type: 'text', section: 'notices', order: 1 },
     { key: 'urgent_note_text', value: '*If require urgent appointment in 4-5 days kindly email support@nuvisa.co.uk do not follow the standard visa process.', type: 'text', section: 'notices', order: 2 },
