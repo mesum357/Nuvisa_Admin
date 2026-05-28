@@ -2,40 +2,95 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const comparisonSeedData = {
-  title: "Travel Agency",
-  leftSideTitle: "Traditional Agency",
-  rightSideTitle: "NUvisa",
-  leftSideImage: "/image/visa-agency.png",
-  rightSideImage: "/image/nuvisa-image.jpg",
+export const comparisonSeedData = {
+  title: 'Transparency builds trust',
+  tooltip: 'Competitor information gathered in March 2026; pricing is subject to change.',
+  leftSideTitle: 'Traditional Agency',
+  rightSideTitle: 'NUvisa',
+  leftSideImage: '/image/visa-agency.png',
+  rightSideImage: '/image/nuvisa-image.jpg',
   leftSideItems: [
-    "£250-£300 + extra fees",
-    "Traditional, often heavy-paperwork",
-    "Appointment in 6-8 weeks",
-    "Application business hours only",
-    "In-person or lengthy phone appointments",
+    '£250–£300 + extra fees',
+    'Traditional, often heavy-paperwork',
+    'Appointment in 6–8 weeks',
+    'Application business hours only',
+    'In-person or lengthy phone appointments',
   ],
   rightSideItems: [
-    "Flat £200 - no hidden fees",
-    "AI powered seamless process",
-    "Appointment in 10 days or less",
-    "24/7 instant submission & tracking",
-    "Complete digital experience",
+    'Flat £169 – no hidden fees',
+    'AI powered seamless process',
+    'Appointment in 10 days or less',
+    '24/7 instant submission & tracking',
+    'Complete digital experience',
   ],
+  detailSections: [
+    {
+      title: 'Care & professionalism',
+      items: [
+        'Appointments with us are 2x faster than the industry average',
+        'Real-time status tracking from anywhere',
+        'Full itinerary included — flight reservations, hotel bookings, and cover letters, all in one place',
+        'We prepare and verify every document so nothing gets rejected at the embassy',
+        'Fast turnaround — we aim to review every application within 3 working hours',
+      ],
+    },
+    {
+      title: 'Take a closer look',
+      items: [
+        'A criminal history may disqualify you from obtaining a visa',
+        'Previous overstays or visa breaches can impact your application',
+        'A passport valid for less than 3 months after your Schengen trip may affect your visa eligibility',
+        'Valid and adequate travel insurance is mandatory. You can add it to your order or provide your existing policy',
+      ],
+    },
+  ],
+  experienceType: 'IMAGES',
+  experienceTitle: 'THE EXPERIENCE',
+  experienceItems: null,
+  comparisonColumns: ['NUvisa', 'IVISA', "SCOTT'S", 'CIBT'],
+  comparisonRows: [
+    {
+      feature: 'Price',
+      values: ['£169', '£295', '£395', '£475'],
+    },
+    {
+      feature: 'Savings',
+      values: ['—', '+43%', '+57%', '+64%'],
+    },
+    {
+      feature: 'Average appointment time',
+      values: ['10 days or less', '4-6 weeks', '4-6 weeks', '3-4 weeks'],
+    },
+    {
+      feature: 'Urgent appointment help',
+      values: ['check', 'x', 'x', 'x'],
+    },
+  ],
+  countryName: 'Default',
   isActive: true,
 };
 
 export async function seedComparisonSection() {
   try {
-    // Check if comparison section already exists
-    const existingComparison = await prisma.comparisonSection.findFirst();
-    
-    if (existingComparison) {
-      console.log('Comparison section already exists, updating with fresh data...');
-      
-      // Update the existing comparison section
+    const existingDefault = await prisma.comparisonSection.findFirst({
+      where: { countryName: 'Default' },
+    });
+
+    if (existingDefault) {
       const updatedComparison = await prisma.comparisonSection.update({
-        where: { id: existingComparison.id },
+        where: { id: existingDefault.id },
+        data: comparisonSeedData,
+      });
+
+      console.log('Comparison section (Default) updated successfully:', updatedComparison.id);
+      return updatedComparison;
+    }
+
+    const existingAny = await prisma.comparisonSection.findFirst();
+
+    if (existingAny) {
+      const updatedComparison = await prisma.comparisonSection.update({
+        where: { id: existingAny.id },
         data: comparisonSeedData,
       });
 
@@ -43,7 +98,6 @@ export async function seedComparisonSection() {
       return updatedComparison;
     }
 
-    // Create the comparison section
     const comparison = await prisma.comparisonSection.create({
       data: comparisonSeedData,
     });
@@ -56,7 +110,6 @@ export async function seedComparisonSection() {
   }
 }
 
-// Run the seed if this file is executed directly
 if (require.main === module) {
   seedComparisonSection()
     .catch((error) => {

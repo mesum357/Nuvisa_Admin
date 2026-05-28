@@ -1,6 +1,7 @@
 // Comparison Section API Route
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { revalidatePublicSite } from '@/lib/revalidate-public-site';
 
 type OccasionCountryPricing = {
   country?: string;
@@ -330,6 +331,8 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    await revalidatePublicSite(['content', 'homepage', 'comparison']);
+
     return NextResponse.json({
       success: true,
       data: data
@@ -415,6 +418,8 @@ export async function PATCH(request: NextRequest) {
         });
       }
 
+      await revalidatePublicSite(['content', 'homepage', 'comparison']);
+
       return NextResponse.json({
         success: true,
         data: {
@@ -450,6 +455,8 @@ export async function PATCH(request: NextRequest) {
         data: updateData
       });
     }
+
+    await revalidatePublicSite(['content', 'homepage', 'comparison']);
 
     return NextResponse.json({
       success: true,
