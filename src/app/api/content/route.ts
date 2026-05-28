@@ -123,6 +123,8 @@ export async function PATCH(request: NextRequest) {
       },
     });
 
+    await revalidatePublicSite(['content', 'homepage']);
+
     return NextResponse.json({
       success: true,
       data: content,

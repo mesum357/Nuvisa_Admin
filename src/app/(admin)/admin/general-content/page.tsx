@@ -9,6 +9,7 @@ import TopDestinationContentForm from '@/components/admin/general-content/TopDes
 import ContactContentForm from '@/components/admin/general-content/ContactContentForm';
 import UrgentContentForm from '@/components/admin/general-content/UrgentContentForm';
 import MoreToLoveContentForm from '@/components/admin/general-content/MoreToLoveContentForm';
+import PriceMatchContentForm from '@/components/admin/general-content/PriceMatchContentForm';
 import { GeneralContentProvider } from '@/context/GeneralContentContext';
 
 export default function GeneralContentPage() {
@@ -29,6 +30,7 @@ export default function GeneralContentPage() {
       <ContactContentForm />
       <UrgentContentForm />
       <MoreToLoveContentForm />
+      <PriceMatchContentForm />
       <PriceContentForm />
     </div>
     </GeneralContentProvider>

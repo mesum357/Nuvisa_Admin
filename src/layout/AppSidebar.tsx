@@ -53,6 +53,7 @@ const navSections: NavSection[] = [
           { name: "Header content", path: "/admin/header-content" },
           { name: "Footer content", path: "/admin/footer-content" },
           { name: "General content", path: "/admin/general-content" },
+          { name: "Price match promise", path: "/admin/price-match-content" },
           { name: "FAQs", path: "/admin/faqs" },
         ],
       },
@@ -121,6 +122,7 @@ const AppSidebar: React.FC = () => {
       if (path.startsWith('/admin/process-content')) return can('siteContent', 'read');
       if (path.startsWith('/admin/hero-content')) return can('siteContent', 'read');
       if (path.startsWith('/admin/general-content')) return can('siteContent', 'read');
+      if (path.startsWith('/admin/price-match-content')) return can('siteContent', 'read');
       if (path.startsWith('/admin/content')) return can('siteContent', 'read');
       if (path.startsWith('/admin/sent-emails')) return can('siteContent', 'read');
       if (path.startsWith('/admin/email-templates')) return can('siteContent', 'read');
