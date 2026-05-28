@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { revalidatePublicSite } from '@/lib/revalidate-public-site';
 
 const DEFAULT_OCCASIONS = [
   { title: "Best snow right now", subTitle: "LAST-MINUTE SKI HOLIDAYS", img: "/image/occ1.jpeg", textColor: "#2d3436" },
@@ -84,6 +85,8 @@ export async function POST(request: Request) {
     if (typeof finalContent.occasions === 'string') {
       finalContent.occasions = JSON.parse(finalContent.occasions);
     }
+
+    await revalidatePublicSite(['content', 'homepage', 'occasion']);
 
     return NextResponse.json({ success: true, data: finalContent });
   } catch (error: any) {
