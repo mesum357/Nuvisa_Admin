@@ -315,6 +315,23 @@ const SITE_CONTENT_UPDATES: Array<{ key: string; value: string }> = [
     key: 'price_match_title',
     value: 'The NUvisa Price Match Promise',
   },
+  {
+    key: 'price_match_description',
+    value:
+      "At NUvisa, we want you to get your Schengen visa with total confidence, that's why we regularly review our prices. In fact, we promise to match any like-for-like Schengen visa price, so you can apply with peace of mind.",
+  },
+  {
+    key: 'more_to_love_title_one',
+    value: 'More to Love',
+  },
+  {
+    key: 'more_to_love_left_title',
+    value: 'Insurance certificate',
+  },
+  {
+    key: 'more_to_love_right_title',
+    value: 'NUvisa Gift Card',
+  },
 ];
 
 async function upsertKeyedRows<T extends { key: string; value: string }>(
@@ -483,6 +500,52 @@ async function syncFaqsFromProduction() {
   console.log(`✓ FAQs synced from production (${rows.length} items)`);
 }
 
+async function syncComparisonFromProduction() {
+  const res = await fetch(
+    'https://nuvisa.co.uk/api/comparison-section?path=active&country=Default',
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to fetch production comparison: ${res.status}`);
+  }
+  const data = (await res.json()) as Record<string, unknown>;
+  if (!data?.title) {
+    throw new Error('Production comparison section was empty');
+  }
+
+  const payload = {
+    title: String(data.title),
+    tooltip: data.tooltip ? String(data.tooltip) : null,
+    leftSideTitle: String(data.leftSideTitle || 'Traditional Agency'),
+    rightSideTitle: String(data.rightSideTitle || 'NUvisa'),
+    leftSideImage: data.leftSideImage ? String(data.leftSideImage) : null,
+    rightSideImage: data.rightSideImage ? String(data.rightSideImage) : null,
+    leftSideItems: data.leftSideItems ?? [],
+    rightSideItems: data.rightSideItems ?? [],
+    detailSections: data.detailSections ?? [],
+    experienceType: data.experienceType ? String(data.experienceType) : 'TASKS',
+    experienceTitle: data.experienceTitle ? String(data.experienceTitle) : null,
+    experienceItems: data.experienceItems ?? [],
+    comparisonColumns: data.comparisonColumns ?? [],
+    comparisonRows: data.comparisonRows ?? [],
+    countryName: 'Default',
+    isActive: true,
+  };
+
+  const existing = await prisma.comparisonSection.findFirst({
+    where: { countryName: 'Default' },
+  });
+
+  if (existing) {
+    await prisma.comparisonSection.update({
+      where: { id: existing.id },
+      data: payload,
+    });
+  } else {
+    await prisma.comparisonSection.create({ data: payload });
+  }
+  console.log('✓ comparison section synced from production');
+}
+
 export async function syncProductionContent() {
   console.log('Syncing staging CMS to production nuvisa.co.uk copy…');
   await syncHeaderContent();
@@ -492,6 +555,7 @@ export async function syncProductionContent() {
   await syncKlarnaContent();
   await syncSiteContent();
   await syncOccasionContent();
+  await syncComparisonFromProduction();
   await syncFaqsFromProduction();
   console.log('Production content sync complete.');
 }

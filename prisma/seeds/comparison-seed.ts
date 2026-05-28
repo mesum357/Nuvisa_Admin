@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 export const comparisonSeedData = {
   title: 'Transparency builds trust',
-  tooltip: 'Competitor information gathered in March 2026; pricing is subject to change.',
+  tooltip: 'Competitor information gathered in April 2026 pricing is subject to change.',
   leftSideTitle: 'Traditional Agency',
   rightSideTitle: 'NUvisa',
   leftSideImage: '/image/visa-agency.png',
@@ -17,7 +17,7 @@ export const comparisonSeedData = {
     'In-person or lengthy phone appointments',
   ],
   rightSideItems: [
-    'Flat £169 – no hidden fees',
+    'Flat £200 - no hidden fees',
     'AI powered seamless process',
     'Appointment in 10 days or less',
     '24/7 instant submission & tracking',
@@ -47,11 +47,11 @@ export const comparisonSeedData = {
   comparisonRows: [
     {
       feature: 'Price',
-      values: ['£169', '£295', '£395', '£475'],
+      values: ['£110', '£295', '£395', '£475'],
     },
     {
       feature: 'Savings',
-      values: ['—', '+43%', '+57%', '+64%'],
+      values: ['—', '+63%', '+72%', '+77%'],
     },
     {
       feature: 'Average appointment time',
