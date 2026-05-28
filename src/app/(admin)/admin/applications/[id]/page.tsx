@@ -11,6 +11,7 @@ import {
   canViewAmounts,
   downloadFileWithFallback,
   formatStatusForEmail,
+  resolveStoredFileUrl,
 } from '@/lib/utils';
 import {
   getPassportAdminStatusKeyFromBackend,
@@ -158,7 +159,9 @@ export default function ApplicationDetailsPage() {
             const value = docContainer[docType];
             const pushDoc = (item: any, docIndex: number = 0) => {
               if (!item) return;
-              const fileUrl = item.preview || item.fileUrl || item.url;
+              const fileUrl = resolveStoredFileUrl(
+                item.preview || item.fileUrl || item.url
+              );
               const fileName = item.name || item.fileName || docType;
               const fileSize = Number(item.size || item.fileSize || 0);
               const uploadedAt = item.uploadedAt || traveler?.createdAt || d.updatedAt || d.createdAt || new Date().toISOString();
@@ -556,7 +559,7 @@ export default function ApplicationDetailsPage() {
                                 {cert.url && (
                                   <div className="flex gap-2">
                                     <a 
-                                      href={cert.url} 
+                                      href={resolveStoredFileUrl(cert.url) || cert.url} 
                                       target="_blank" 
                                       rel="noopener noreferrer"
                                       className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
@@ -565,7 +568,7 @@ export default function ApplicationDetailsPage() {
                                     </a>
                                     <button
                                       onClick={() => handleDocumentDownload({ 
-                                        fileUrl: cert.url, 
+                                        fileUrl: resolveStoredFileUrl(cert.url) || cert.url, 
                                         fileName: `certificate-${index + 1}`,
                                         id: `cert-${index}`
                                       })}
@@ -995,7 +998,7 @@ export default function ApplicationDetailsPage() {
                                         </span>
                                         <div className="flex gap-2">
                                           <a 
-                                            href={traveler.insurance.insuranceCertificates} 
+                                            href={resolveStoredFileUrl(traveler.insurance.insuranceCertificates) || traveler.insurance.insuranceCertificates} 
                                             target="_blank" 
                                             rel="noopener noreferrer"
                                             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
@@ -1004,7 +1007,7 @@ export default function ApplicationDetailsPage() {
                                           </a>
                                           <button
                                             onClick={() => handleDocumentDownload({ 
-                                              fileUrl: traveler.insurance.insuranceCertificates, 
+                                              fileUrl: resolveStoredFileUrl(traveler.insurance.insuranceCertificates) || traveler.insurance.insuranceCertificates, 
                                               fileName: 'insurance-certificate',
                                               id: `insurance-cert-${traveler.id}`
                                             })}
@@ -1028,7 +1031,7 @@ export default function ApplicationDetailsPage() {
                                         </span>
                                         <div className="flex gap-2">
                                           <a 
-                                            href={insuranceData.file.preview || insuranceData.file.data} 
+                                            href={resolveStoredFileUrl(insuranceData.file.preview || insuranceData.file.data) || insuranceData.file.preview || insuranceData.file.data} 
                                             target="_blank" 
                                             rel="noopener noreferrer"
                                             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm underline"
@@ -1037,7 +1040,7 @@ export default function ApplicationDetailsPage() {
                                           </a>
                                           <button
                                             onClick={() => handleDocumentDownload({ 
-                                              fileUrl: insuranceData.file.preview || insuranceData.file.data, 
+                                              fileUrl: resolveStoredFileUrl(insuranceData.file.preview || insuranceData.file.data) || insuranceData.file.preview || insuranceData.file.data, 
                                               fileName: insuranceData.file.name || 'insurance-file',
                                               id: `insurance-file-${traveler.id}`
                                             })}

@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { resolveBackendFileUrl } from '@/lib/config';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const fileUrl = searchParams.get('url');
+    const rawUrl = searchParams.get('url');
     const fileName = searchParams.get('name') || 'download';
 
-    if (!fileUrl) {
+    if (!rawUrl) {
       return NextResponse.json({ error: 'File URL is required' }, { status: 400 });
+    }
+
+    const fileUrl = resolveBackendFileUrl(rawUrl);
+    if (!fileUrl) {
+      return NextResponse.json({ error: 'Invalid file URL' }, { status: 400 });
     }
 
     // Fetch the file from the external URL

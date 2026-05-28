@@ -9,7 +9,12 @@ import {
   getPassportStatusMessage,
   mapAdminStatusKeyToBackend,
   mapAdminStatusKeyToPrisma,
+  isPassportFinalStage,
 } from '@/lib/passportStatusMessages';
+import {
+  getApplicationStatusLabel,
+  getApplicationStatusMessage,
+} from '@/lib/applicationStatusMessages';
 import { formatStatusForEmail } from '@/lib/utils';
 
 export async function GET(
@@ -103,13 +108,21 @@ export async function PATCH(
     const { status, sendNotification, oldStatus, statusDisplay, ...updateData } = data;
 
     const formattedOldStatus = formatStatusForEmail(String(oldStatus || ''));
-    const passportMessage = status ? getPassportStatusMessage(String(status)) : '';
-    const passportLabel = status ? getPassportStatusLabel(String(status)) : '';
-    const formattedStatus =
-      statusDisplay || passportLabel || passportMessage || formatStatusForEmail(String(status || ''));
+    const backendStatus = status ? mapAdminStatusKeyToBackend(status) : undefined;
+    const isPassport = status ? isPassportFinalStage(String(status)) : false;
+    const emailStatusLabel = status
+      ? isPassport
+        ? getPassportStatusLabel(String(status))
+        : getApplicationStatusLabel(backendStatus || String(status))
+      : '';
+    const emailStatusMessage = status
+      ? isPassport
+        ? getPassportStatusMessage(String(status))
+        : getApplicationStatusMessage(backendStatus || String(status))
+      : '';
+    const formattedStatus = emailStatusLabel || formatStatusForEmail(String(status || ''));
 
     // ALWAYS try to update the backend first (visa_applications table)
-    const backendStatus = status ? mapAdminStatusKeyToBackend(status) : undefined;
     try {
       const backendPayload: Record<string, unknown> = {
         status: backendStatus,
@@ -118,14 +131,12 @@ export async function PATCH(
         adminStatusKey: status,
       };
 
-      // Pass display-friendly values for email templates expecting old/new status text.
       if (formattedOldStatus) {
         backendPayload.oldStatus = formattedOldStatus;
       }
-      if (formattedStatus) {
-        backendPayload.statusDisplay = passportLabel || formattedStatus;
-        backendPayload.newStatus = passportMessage || formattedStatus;
-        backendPayload.statusMessage = passportMessage || formattedStatus;
+      if (emailStatusLabel) {
+        backendPayload.statusDisplay = emailStatusLabel;
+        backendPayload.statusMessage = emailStatusMessage;
       }
 
       console.log('[admin/applications PATCH] updating status', {
@@ -153,8 +164,8 @@ export async function PATCH(
           id: app.id || app.applicationId || id,
           status: status || app.adminStatusKey || app.applicationStatus || app.status,
           adminStatusKey: app.adminStatusKey || status,
-          statusDisplay: app.statusDisplay || passportLabel || formattedStatus,
-          statusMessage: app.statusMessage || passportMessage,
+          statusDisplay: app.statusDisplay || emailStatusLabel || formattedStatus,
+          statusMessage: app.statusMessage || emailStatusMessage,
           totalAmount: app.totalAmount || app.amountPaidTotal || app.amountPaid || 0,
           paidAmount: app.paidAmount || app.amountPaidTotal || app.amountPaid || 0,
           submittedAt: app.submittedAt || app.createdAt,
@@ -226,7 +237,7 @@ export async function PATCH(
 
       if (sendNotification) {
         const emailHtml = getApplicationStatusEmailTemplate(
-          currentApplication.user.name,
+          'Applicant',
           currentApplication.applicationNo,
           status,
           updateData.note

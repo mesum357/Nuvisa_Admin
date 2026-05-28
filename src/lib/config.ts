@@ -42,6 +42,36 @@ export function getBackendUrl(endpoint: string): string {
 }
 
 /**
+ * Rewrite localhost/127.0.0.1 upload URLs stored in the DB to the configured backend.
+ */
+export function resolveBackendFileUrl(rawUrl?: string | null): string | null {
+  if (rawUrl == null) return null;
+  const trimmed = String(rawUrl).trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
+
+  const backendBase = BACKEND_CONFIG.BASE_URL.replace(/\/+$/, '');
+
+  try {
+    const parsed = new URL(trimmed, backendBase);
+    const isLocalHost = /^(localhost|127\.0\.0\.1)$/i.test(parsed.hostname);
+    if (isLocalHost && parsed.pathname) {
+      return `${backendBase}${parsed.pathname}${parsed.search || ''}`;
+    }
+    if (trimmed.startsWith('/')) {
+      return `${backendBase}${trimmed}`;
+    }
+    return trimmed;
+  } catch {
+    const path = trimmed.replace(/^\/+/, '');
+    if (path.startsWith('uploads/')) {
+      return `${backendBase}/${path}`;
+    }
+    return trimmed;
+  }
+}
+
+/**
  * Get common headers for backend requests
  */
 export function getBackendHeaders(token?: string): Record<string, string> {

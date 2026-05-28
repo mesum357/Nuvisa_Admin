@@ -3,10 +3,10 @@
  */
 
 export const APPLICATION_STATUS_LABELS: Record<string, string> = {
-  pending: 'Application submitted',
-  submitted: 'Application submitted',
-  under_review: 'Under review',
-  processing: 'Under review',
+  pending: 'Application Submitted',
+  submitted: 'Application Submitted',
+  under_review: 'Under Review',
+  processing: 'Under Review',
   appointment_booked: 'Appointment booked',
   at_embassy: 'At Embassy',
   decision_made: 'Decision made, passport dispatched/ready',
