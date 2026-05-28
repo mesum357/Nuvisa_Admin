@@ -25,7 +25,7 @@ export const comparisonSeedData = {
   ],
   detailSections: [
     {
-      title: 'Care & professionalism',
+      title: 'care & professionalism',
       items: [
         'Appointments with us are 2x faster than the industry average',
         'Real-time status tracking from anywhere',
@@ -34,20 +34,16 @@ export const comparisonSeedData = {
         'Fast turnaround — we aim to review every application within 3 working hours',
       ],
     },
-    {
-      title: 'Take a closer look',
-      items: [
-        'A criminal history may disqualify you from obtaining a visa',
-        'Previous overstays or visa breaches can impact your application',
-        'A passport valid for less than 3 months after your Schengen trip may affect your visa eligibility',
-        'Valid and adequate travel insurance is mandatory. You can add it to your order or provide your existing policy',
-      ],
-    },
   ],
-  experienceType: 'IMAGES',
-  experienceTitle: 'THE EXPERIENCE',
-  experienceItems: null,
-  comparisonColumns: ['NUvisa', 'IVISA', "SCOTT'S", 'CIBT'],
+  experienceType: 'TASKS',
+  experienceTitle: 'Take a closer look',
+  experienceItems: [
+    'A criminal history may disqualifies you from obtaining a visa',
+    'Previous overstays or visa breaches can impact your application',
+    'A passport valid for less than 3 months after Schengen trip may affect your visa eligibility',
+    'Valid and adequate travel insurance is mandatory. You can add it to your order or provide your existing policy',
+  ],
+  comparisonColumns: ['NUVIsa', 'IVISA', "SCOTT'S", 'CIBT'],
   comparisonRows: [
     {
       feature: 'Price',

@@ -255,14 +255,32 @@ export async function GET(request: NextRequest) {
     let data;
 
     if (path === 'active') {
-      // Get active comparison section, optionally filtered by country
-      data = await prisma.comparisonSection.findFirst({
-        where: {
-          isActive: true,
-          ...(country ? { countryName: country } : {})
-        },
-        orderBy: { updatedAt: 'desc' }
-      });
+      if (country) {
+        data = await prisma.comparisonSection.findFirst({
+          where: {
+            isActive: true,
+            countryName: country,
+          },
+          orderBy: { updatedAt: 'desc' },
+        });
+      }
+
+      if (!data) {
+        data = await prisma.comparisonSection.findFirst({
+          where: {
+            isActive: true,
+            countryName: 'Default',
+          },
+          orderBy: { updatedAt: 'desc' },
+        });
+      }
+
+      if (!data) {
+        data = await prisma.comparisonSection.findFirst({
+          where: { isActive: true },
+          orderBy: { updatedAt: 'desc' },
+        });
+      }
 
       // If occasion mode is enabled, override only the NUVisa price cell using occasion pricing.
       if (data && isOccasion && country) {
@@ -279,14 +297,7 @@ export async function GET(request: NextRequest) {
         where: { id: path }
       });
     }
-    if(!data) {
-      data = await prisma.comparisonSection.findFirst({
-        where:{
-          isActive:true,
-          countryName:"Default"
-        }
-      });
-    }
+
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error fetching comparison section:', error);
