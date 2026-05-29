@@ -1,6 +1,8 @@
 import prisma from '@/lib/prisma';
 
 export const DAILY_SLOTS_STATE_KEY = 'daily_slots_state';
+export const EXPERT_SPOTS_RESET_VALUE = 12;
+export const EXPERT_SPOTS_ROLLOVER_THRESHOLD = 8;
 
 export type DailySlotsState = {
   dayKey: string;
@@ -20,19 +22,54 @@ const getUkDayKey = () => {
   return `${get('year')}-${get('month')}-${get('day')}`;
 };
 
+/** If spots < 8 at UK day boundary, reset to default (12); otherwise carry forward. */
+export function applyExpertSpotsDayRollover(
+  previousRemaining: number,
+  defaultSpots: number = EXPERT_SPOTS_RESET_VALUE,
+): number {
+  const normalizedDefault = Math.max(1, Math.floor(Number(defaultSpots) || EXPERT_SPOTS_RESET_VALUE));
+  const normalizedPrevious = Math.max(
+    0,
+    Math.floor(Number(previousRemaining) || normalizedDefault),
+  );
+  if (normalizedPrevious < EXPERT_SPOTS_ROLLOVER_THRESHOLD) {
+    return normalizedDefault;
+  }
+  return normalizedPrevious;
+}
+
 export async function readDailySlotsState(): Promise<DailySlotsState> {
   const dayKey = getUkDayKey();
   const row = await prisma.siteContent.findUnique({
     where: { key: DAILY_SLOTS_STATE_KEY },
   });
   if (!row?.value) {
-    return { dayKey, remaining: 12, defaultSpots: 12 };
+    const initial = {
+      dayKey,
+      remaining: EXPERT_SPOTS_RESET_VALUE,
+      defaultSpots: EXPERT_SPOTS_RESET_VALUE,
+    };
+    await writeDailySlotsState(initial);
+    return initial;
   }
   try {
     const parsed = JSON.parse(row.value) as DailySlotsState;
-    const defaultSpots = Math.max(1, Number(parsed.defaultSpots) || 12);
+    const defaultSpots = Math.max(
+      1,
+      Number(parsed.defaultSpots) || EXPERT_SPOTS_RESET_VALUE,
+    );
     if (parsed.dayKey !== dayKey) {
-      return { dayKey, remaining: defaultSpots, defaultSpots };
+      const previousRemaining = Math.max(
+        0,
+        Math.floor(Number(parsed.remaining) ?? defaultSpots),
+      );
+      const rolled = {
+        dayKey,
+        remaining: applyExpertSpotsDayRollover(previousRemaining, defaultSpots),
+        defaultSpots,
+      };
+      await writeDailySlotsState(rolled);
+      return rolled;
     }
     const remaining = Math.max(
       0,
@@ -40,7 +77,13 @@ export async function readDailySlotsState(): Promise<DailySlotsState> {
     );
     return { dayKey, remaining, defaultSpots };
   } catch {
-    return { dayKey, remaining: 12, defaultSpots: 12 };
+    const fallback = {
+      dayKey,
+      remaining: EXPERT_SPOTS_RESET_VALUE,
+      defaultSpots: EXPERT_SPOTS_RESET_VALUE,
+    };
+    await writeDailySlotsState(fallback);
+    return fallback;
   }
 }
 
