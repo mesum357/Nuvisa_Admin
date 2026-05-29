@@ -12,6 +12,7 @@ import {
   downloadFileWithFallback,
   formatStatusForEmail,
   getAdminFileProxyUrl,
+  isSuperAdmin,
 } from '@/lib/utils';
 import {
   getPassportAdminStatusKeyFromBackend,
@@ -211,17 +212,19 @@ export default function ApplicationDetailsPage() {
   }, [params.id]);
 
   const fetchTeamMembers = useCallback(async () => {
+    if (!isSuperAdmin(session?.user)) return;
     try {
       const response = await apiClient.get<{ id: string; email: string; name?: string }[]>(
-        '/team-members'
+        '/admins',
+        { assignable: 'true' }
       );
       if (response.success && Array.isArray(response.data)) {
         setTeamMembers(response.data);
       }
     } catch (error) {
-      console.error('Error fetching team members:', error);
+      console.error('Error fetching assignable admins:', error);
     }
-  }, []);
+  }, [session?.user]);
 
   const fetchActivityLog = useCallback(async () => {
     setLoadingActivity(true);
@@ -1216,31 +1219,41 @@ export default function ApplicationDetailsPage() {
         <div className="space-y-6">
           <ComponentCard title="Assigned To">
             <div className="space-y-3">
-              <select
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                value={assigneeId}
-                onChange={(e) => setAssigneeId(e.target.value)}
-              >
-                <option value="">Unassigned</option>
-                {teamMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name || member.email}
-                  </option>
-                ))}
-              </select>
-              {(application as any)?.assignedAdminName && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Current: {(application as any).assignedAdminName}
+              {isSuperAdmin(session?.user) ? (
+                <>
+                  <select
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    value={assigneeId}
+                    onChange={(e) => setAssigneeId(e.target.value)}
+                  >
+                    <option value="">Unassigned</option>
+                    {teamMembers.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.name || member.email}
+                      </option>
+                    ))}
+                  </select>
+                  {(application as any)?.assignedAdminName && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Current: {(application as any).assignedAdminName}
+                    </p>
+                  )}
+                  <Button
+                    onClick={handleAssign}
+                    disabled={assigning}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    {assigning ? 'Saving...' : 'Save assignment'}
+                  </Button>
+                </>
+              ) : (
+                <p className="text-sm text-gray-900 dark:text-white">
+                  {(application as any)?.assignedAdminName ||
+                    (application as any)?.assignedAdminEmail ||
+                    'Unassigned'}
                 </p>
               )}
-              <Button
-                onClick={handleAssign}
-                disabled={assigning}
-                className="w-full"
-                variant="outline"
-              >
-                {assigning ? 'Saving...' : 'Save assignment'}
-              </Button>
             </div>
           </ComponentCard>
 

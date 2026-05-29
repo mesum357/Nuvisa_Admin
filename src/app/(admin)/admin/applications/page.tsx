@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { Application, PaginatedResponse } from '@/types';
-import { formatDate, formatCurrency, getStatusColor, downloadCSV, canViewAmounts } from '@/lib/utils';
+import { formatDate, formatCurrency, getStatusColor, downloadCSV, canViewAmounts, isSuperAdmin } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
 import Link from 'next/link';
 import Button from '@/components/ui/button/Button';
@@ -108,7 +108,9 @@ function ApplicationsContent() {
             Applications
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage all application submissions
+            {isSuperAdmin(session?.user)
+              ? 'Manage all application submissions'
+              : 'Applications assigned to you'}
           </p>
         </div>
         <Button onClick={handleExport} variant="outline" disabled={isExporting}>

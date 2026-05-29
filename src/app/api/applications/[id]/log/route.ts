@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { backendGet } from '@/lib/backend-client';
 
+import { ensureApplicationAccess } from '@/lib/application-access-server';
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -14,6 +16,15 @@ export async function GET(
     }
 
     const { id } = await params;
+
+    const access = await ensureApplicationAccess(session.user as any, id);
+    if (!access.allowed) {
+      return NextResponse.json(
+        { error: access.status === 404 ? 'Application not found' : 'Forbidden' },
+        { status: access.status }
+      );
+    }
+
     const be = await backendGet(
       `/orders/application/${id}/activity`,
       undefined,

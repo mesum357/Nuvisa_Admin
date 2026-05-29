@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { backendGet, backendPost } from '@/lib/backend-client';
 
+import { ensureApplicationAccess } from '@/lib/application-access-server';
+
 // GET /api/applications/[id]/comments - Get comments for an application
 export async function GET(
   request: NextRequest,
@@ -15,6 +17,15 @@ export async function GET(
     }
 
     const { id } = await params;
+
+    const access = await ensureApplicationAccess(session.user as any, id);
+    if (!access.allowed) {
+      return NextResponse.json(
+        { error: access.status === 404 ? 'Application not found' : 'Forbidden' },
+        { status: access.status }
+      );
+    }
+
     const response = await backendGet(`/orders/application/${id}/comments`);
     if (!response.ok) {
       return NextResponse.json(response.data || { error: 'Backend error' }, { status: response.status });
@@ -45,6 +56,15 @@ export async function POST(
     }
 
     const { id } = await params;
+
+    const access = await ensureApplicationAccess(session.user as any, id);
+    if (!access.allowed) {
+      return NextResponse.json(
+        { error: access.status === 404 ? 'Application not found' : 'Forbidden' },
+        { status: access.status }
+      );
+    }
+
     const body = await request.json();
     const { comment, isInternal = true } = body;
 

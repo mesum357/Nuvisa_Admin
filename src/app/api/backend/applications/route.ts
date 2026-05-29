@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { backendGet } from '@/lib/backend-client';
 import { canViewAmounts } from '@/lib/utils';
+import { isSuperAdminUser } from '@/lib/application-access';
 
 // Proxy to Nest backend: GET /api/backend/applications
 export async function GET(request: NextRequest) {
@@ -52,6 +53,12 @@ export async function GET(request: NextRequest) {
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
     };
+
+    const sessionUser = session.user as { id?: string; email?: string; role?: string };
+    if (!isSuperAdminUser(sessionUser)) {
+      queryParams.assignedAdminEmail = sessionUser.email || undefined;
+      queryParams.assignedAdminId = sessionUser.id || undefined;
+    }
 
     // Remove undefined values
     Object.keys(queryParams).forEach(key => {

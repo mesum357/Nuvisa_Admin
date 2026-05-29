@@ -15,7 +15,8 @@ import {
   getApplicationStatusLabel,
   getApplicationStatusMessage,
 } from '@/lib/applicationStatusMessages';
-import { formatStatusForEmail } from '@/lib/utils';
+import { formatStatusForEmail, isSuperAdmin } from '@/lib/utils';
+import { ensureApplicationAccess } from '@/lib/application-access-server';
 
 export async function GET(
   request: NextRequest,
@@ -46,10 +47,17 @@ export async function GET(
     // Fallback to backend if not in Prisma DB
     if (!application) {
       try {
+        const access = await ensureApplicationAccess(session.user as any, id);
+        if (!access.allowed) {
+          return NextResponse.json(
+            { error: access.status === 404 ? 'Application not found' : 'Forbidden' },
+            { status: access.status }
+          );
+        }
+
         const be = await backendGet(`/orders/application/${id}`);
         if (be.ok) {
           const payload: any = be.data?.data || be.data || {};
-          
           // Ensure the backend data includes formatted application numbers
           const formattedData = {
             ...payload,
@@ -104,6 +112,15 @@ export async function PATCH(
     }
 
     const { id } = await params;
+
+    const access = await ensureApplicationAccess(session.user as any, id);
+    if (!access.allowed) {
+      return NextResponse.json(
+        { error: access.status === 404 ? 'Application not found' : 'Forbidden' },
+        { status: access.status }
+      );
+    }
+
     const data = await request.json();
     const { status, sendNotification, oldStatus, statusDisplay, ...updateData } = data;
 

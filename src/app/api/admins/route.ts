@@ -46,9 +46,35 @@ export async function GET(request: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const searchParams = request.nextUrl.searchParams;
+    const assignable = searchParams.get('assignable') === 'true';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
+
+    if (assignable) {
+      if ((session.user as { role?: string })?.role !== 'SUPER_ADMIN') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
+      const admins = await prisma.admin.findMany({
+        where: {
+          role: 'ADMIN',
+          isActive: true,
+          ...(search
+            ? {
+                OR: [
+                  { name: { contains: search, mode: 'insensitive' } },
+                  { email: { contains: search, mode: 'insensitive' } },
+                ],
+              }
+            : {}),
+        },
+        select: { id: true, name: true, email: true },
+        orderBy: { name: 'asc' },
+      });
+
+      return NextResponse.json({ success: true, data: admins });
+    }
 
     const skip = (page - 1) * limit;
 

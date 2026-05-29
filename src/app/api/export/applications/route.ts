@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { backendGet, backendPost } from '@/lib/backend-client';
+import { isSuperAdminUser } from '@/lib/application-access';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,6 +32,14 @@ export async function GET(request: NextRequest) {
     };
 
     let items: any[] = [];
+    const sessionUser = session.user as { id?: string; email?: string; role?: string };
+    const assigneeFilter = !isSuperAdminUser(sessionUser)
+      ? {
+          assignedAdminEmail: sessionUser.email || undefined,
+          assignedAdminId: sessionUser.id || undefined,
+        }
+      : {};
+
     try {
       // Use the new backend export endpoint
       const exportResponse = await backendPost('/orders/export', {
@@ -39,6 +48,7 @@ export async function GET(request: NextRequest) {
         search: search || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        ...assigneeFilter,
       });
 
       if (exportResponse.ok && exportResponse.data?.data) {
@@ -50,6 +60,7 @@ export async function GET(request: NextRequest) {
           page_size: 1000,
           status: mapStatus(status) || undefined,
           q: search || undefined,
+          ...assigneeFilter,
         });
         if (be.ok) {
           const env = (be.data as any) || {};
